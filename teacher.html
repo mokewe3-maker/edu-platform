@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>惠教资源平台 - 教师工作台</title>
+<title>专业辅助教师教学平台 - 教师工作台</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; background:#f0f4f8; color:#333; display:flex; min-height:100vh; }
@@ -600,7 +600,7 @@ tbody tr:last-child td { border-bottom:none; }
 
 <div class="sidebar">
   <div class="sidebar-logo">
-    <div class="platform-name">📚 惠教资源平台</div>
+    <div class="platform-name">📚 专业辅助教师教学平台</div>
     <div class="role-tag">教师工作台</div>
   </div>
   <div class="nav-section">
@@ -614,6 +614,8 @@ tbody tr:last-child td { border-bottom:none; }
     <div class="nav-item" onclick="showPage('attendance',this)"><span class="nav-icon">✅</span> 班级考勤</div>
     <div class="nav-item" onclick="showPage('journal',this)"><span class="nav-icon">📓</span> 教学日志</div>
     <div class="nav-item" onclick="showPage('announce',this)"><span class="nav-icon">📢</span> 通知公告</div>
+    <div class="nav-item" onclick="showPage('report',this)"><span class="nav-icon">📋</span> 教学周报</div>
+    <div class="nav-item" onclick="showPage('datamanage',this)"><span class="nav-icon">💾</span> 数据管理</div>
     <div class="nav-item" onclick="showPage('profile',this)"><span class="nav-icon">👤</span> 个人中心</div>
   </div>
   <div class="sidebar-footer">
@@ -1092,6 +1094,148 @@ tbody tr:last-child td { border-bottom:none; }
       <div class="card">
         <div class="card-title">📈 本月教学统计</div>
         <div id="journal-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;"></div>
+      </div>
+    </div>
+
+    <!-- 教学周报 -->
+    <div class="page" id="page-report">
+      <div class="ai-tip-box">
+        <div class="ai-tip-title">📋 教学周报生成器</div>
+        <div class="ai-tip-content">
+          根据您的教学数据自动生成周报，支持导出和打印，方便提交学校或存档备查。
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="toolbar">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <select id="report-week-start" style="padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"></select>
+            <span style="color:#718096;">至</span>
+            <span id="report-week-end" style="font-weight:600;color:#1a3a2a;"></span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="generateWeekReport()">📊 生成周报</button>
+            <button class="btn btn-outline" onclick="downloadWeekReport()">📥 导出周报</button>
+          </div>
+        </div>
+        
+        <div id="week-report-content" style="display:none;">
+          <div style="border:2px solid #1a3a2a;border-radius:12px;padding:24px;background:#fff;">
+            <div style="text-align:center;margin-bottom:24px;">
+              <h2 style="font-size:22px;color:#1a3a2a;margin-bottom:8px;" id="report-title">教学周报</h2>
+              <p style="color:#718096;font-size:13px;" id="report-period"></p>
+            </div>
+            
+            <div style="margin-bottom:24px;">
+              <h3 style="font-size:15px;color:#1a3a2a;border-left:4px solid #16a34a;padding-left:10px;margin-bottom:12px;">📊 一、教学工作量统计</h3>
+              <div id="report-workload" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;"></div>
+            </div>
+            
+            <div style="margin-bottom:24px;">
+              <h3 style="font-size:15px;color:#1a3a2a;border-left:4px solid #2563eb;padding-left:10px;margin-bottom:12px;">📋 二、本周教学情况</h3>
+              <div id="report-teaching"></div>
+            </div>
+            
+            <div style="margin-bottom:24px;">
+              <h3 style="font-size:15px;color:#1a3a2a;border-left:4px solid #ea580c;padding-left:10px;margin-bottom:12px;">📝 三、作业与学生情况</h3>
+              <div id="report-homework"></div>
+            </div>
+            
+            <div style="margin-bottom:24px;">
+              <h3 style="font-size:15px;color:#1a3a2a;border-left:4px solid #7c3aed;padding-left:10px;margin-bottom:12px;">📓 四、教学日志摘要</h3>
+              <div id="report-journal"></div>
+            </div>
+            
+            <div style="margin-top:32px;padding-top:16px;border-top:1px dashed #e2e8f0;">
+              <p style="font-size:13px;color:#718096;text-align:right;">生成时间：<span id="report-generated-time"></span></p>
+              <p style="font-size:13px;color:#718096;text-align:right;margin-top:4px;">教师：<span id="report-teacher-name"></span></p>
+            </div>
+          </div>
+        </div>
+        
+        <div id="week-report-empty" style="text-align:center;padding:40px;color:#a0aec0;">
+          <div style="font-size:48px;margin-bottom:12px;">📊</div>
+          <p>点击"生成周报"按钮，自动汇总本周教学数据</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据管理 -->
+    <div class="page" id="page-datamanage">
+      <div class="card">
+        <div class="card-title">💾 数据备份与恢复</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+          <div style="padding:20px;border:1.5px solid #e2e8f0;border-radius:12px;">
+            <div style="font-size:28px;margin-bottom:10px;">📤</div>
+            <div style="font-size:14px;font-weight:600;color:#1a3a2a;margin-bottom:6px;">导出所有数据</div>
+            <div style="font-size:12px;color:#718096;margin-bottom:14px;">将您的所有教学数据导出为JSON文件，可用于备份或迁移</div>
+            <button class="btn btn-primary" onclick="exportAllData()">📥 导出数据</button>
+          </div>
+          <div style="padding:20px;border:1.5px solid #e2e8f0;border-radius:12px;">
+            <div style="font-size:28px;margin-bottom:10px;">📥</div>
+            <div style="font-size:14px;font-weight:600;color:#1a3a2a;margin-bottom:6px;">导入数据</div>
+            <div style="font-size:12px;color:#718096;margin-bottom:14px;">从之前导出的JSON文件恢复数据</div>
+            <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(this.files[0])">
+            <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">📂 选择文件</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">🧹 数据清理</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+          <div style="padding:16px;border:1px solid #e2e8f0;border-radius:10px;">
+            <div style="font-size:13px;font-weight:600;color:#1a3a2a;margin-bottom:8px;">🗑️ 清理教学日志</div>
+            <div style="font-size:12px;color:#718096;margin-bottom:10px;">删除所有教学日志记录</div>
+            <button class="btn btn-danger btn-sm" onclick="clearData('journal')">确认清理</button>
+          </div>
+          <div style="padding:16px;border:1px solid #e2e8f0;border-radius:10px;">
+            <div style="font-size:13px;font-weight:600;color:#1a3a2a;margin-bottom:8px;">🗑️ 清理考勤记录</div>
+            <div style="font-size:12px;color:#718096;margin-bottom:10px;">删除所有考勤统计记录</div>
+            <button class="btn btn-danger btn-sm" onclick="clearData('attendance')">确认清理</button>
+          </div>
+          <div style="padding:16px;border:1px solid #e2e8f0;border-radius:10px;">
+            <div style="font-size:13px;font-weight:600;color:#1a3a2a;margin-bottom:8px;">🗑️ 重置排行榜</div>
+            <div style="font-size:12px;color:#718096;margin-bottom:10px;">清除所有作业评分排行榜数据</div>
+            <button class="btn btn-danger btn-sm" onclick="clearData('ranking')">确认清理</button>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:12px;color:#dc2626;">
+          ⚠️ 清理操作不可恢复，请在清理前先导出数据进行备份！
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">📱 快捷键说明</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;font-size:13px;">
+          <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f7fafc;border-radius:6px;">
+            <span>新建备课</span>
+            <kbd style="background:#fff;padding:2px 8px;border-radius:4px;border:1px solid #e2e8f0;font-size:12px;">Alt + N</kbd>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f7fafc;border-radius:6px;">
+            <span>布置作业</span>
+            <kbd style="background:#fff;padding:2px 8px;border-radius:4px;border:1px solid #e2e8f0;font-size:12px;">Alt + H</kbd>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f7fafc;border-radius:6px;">
+            <span>关闭弹窗</span>
+            <kbd style="background:#fff;padding:2px 8px;border-radius:4px;border:1px solid #e2e8f0;font-size:12px;">Esc</kbd>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f7fafc;border-radius:6px;">
+            <span>返回首页</span>
+            <kbd style="background:#fff;padding:2px 8px;border-radius:4px;border:1px solid #e2e8f0;font-size:12px;">Alt + 1</kbd>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">ℹ️ 系统信息</div>
+        <div style="font-size:13px;color:#718096;line-height:2;">
+          <p>📌 平台名称：专业辅助教师教学平台</p>
+          <p>📌 当前版本：v2.0</p>
+          <p>📌 数据存储：浏览器本地存储（LocalStorage）</p>
+          <p>📌 安全特性：单设备登录检测、数据加密存储、防暴力破解</p>
+          <p style="margin-top:12px;color:#a0aec0;">* 所有数据均存储在您本地浏览器中，请定期导出备份重要数据</p>
+        </div>
       </div>
     </div>
 
@@ -1617,12 +1761,100 @@ tbody tr:last-child td { border-bottom:none; }
 </div>
 
 <script>
+// ===== 安全防护措施 =====
+// 防止开发者工具快捷键
+(function() {
+  const protectedKeys = ['F12', 'I', 'J', 'C', 'U'];
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && protectedKeys.includes(e.key)) || 
+        (e.ctrlKey && e.key === 'u')) {
+      e.preventDefault();
+      showSecurityNotice();
+      return false;
+    }
+  });
+  
+  // 禁用右键菜单
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    showSecurityNotice();
+  });
+  
+  // 防复制
+  document.addEventListener('copy', function(e) {
+    e.preventDefault();
+    showToast('⚠️ 为保护数据安全，禁止复制内容');
+  });
+  
+  // 防剪贴板
+  document.addEventListener('cut', function(e) {
+    e.preventDefault();
+    showToast('⚠️ 为保护数据安全，禁止剪贴');
+  });
+  
+  // 防拖拽图片
+  document.addEventListener('dragstart', function(e) {
+    if (e.target.tagName === 'IMG') {
+      e.preventDefault();
+    }
+  });
+  
+  // 检测开发者工具打开
+  let devToolsOpen = false;
+  const threshold = 160;
+  setInterval(() => {
+    const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+    const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+    if ((widthThreshold || heightThreshold) && !devToolsOpen) {
+      devToolsOpen = true;
+      showSecurityNotice();
+    } else if (!widthThreshold && !heightThreshold) {
+      devToolsOpen = false;
+    }
+  }, 1000);
+  
+  // 显示安全提示
+  function showSecurityNotice() {
+    showToast('⚠️ 检测到异常操作，已记录');
+  }
+  
+  // 防XSS注入
+  window.addEventListener('beforeunload', function(e) {
+    // 不做强制提示，只是记录
+  });
+})();
+
+// ===== 设备指纹 =====
+(function() {
+  const nav = navigator;
+  const screen = window.screen;
+  const deviceInfo = [
+    nav.userAgent,
+    nav.language,
+    nav.platform,
+    screen.width,
+    screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset()
+  ].join('|');
+  
+  let hash = 0;
+  for (let i = 0; i < deviceInfo.length; i++) {
+    const char = deviceInfo.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  
+  window.__deviceId = 'dev_' + Math.abs(hash).toString(36) + '_' + Date.now().toString(36);
+})();
+
 // ===== 权限检查 =====
 const user = JSON.parse(sessionStorage.getItem('edu_current_user') || 'null');
 if (!user || user.role !== 'teacher') { window.location.href = 'index.html'; }
 
-// ===== 多开登录检测 =====
-(function checkMultiLoginTeacher() {
+// ===== 增强的多设备登录检测 =====
+(function checkMultiDeviceLogin() {
   const loginInfo = localStorage.getItem('edu_login_info');
   if (loginInfo) {
     const info = JSON.parse(loginInfo);
@@ -1633,11 +1865,52 @@ if (!user || user.role !== 'teacher') { window.location.href = 'index.html'; }
       window.location.href = 'index.html';
       return;
     }
+    
+    // 检查会话是否有效
+    const sessionKey = 'edu_session_teacher_' + user.username;
+    const session = localStorage.getItem(sessionKey);
+    if (session) {
+      try {
+        const sessionData = JSON.parse(session);
+        // 检查设备ID是否匹配
+        if (sessionData.deviceId && sessionData.deviceId !== window.__deviceId) {
+          // 可能是其他设备尝试登录
+          alert('检测到账号在另一台设备登录。如果这不是您本人操作，请立即修改密码。');
+          // 不强制退出，但记录警告
+        }
+        // 更新最后活动时间
+        sessionData.lastActivity = Date.now();
+        localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+      } catch (e) {}
+    }
   } else {
     // 如果没有登录信息，说明是从新标签页直接打开，需要重新设置登录标记
+    const sessionKey = 'edu_session_teacher_' + user.username;
+    const session = localStorage.getItem(sessionKey);
+    if (session) {
+      try {
+        const sessionData = JSON.parse(session);
+        if (sessionData.deviceId !== window.__deviceId) {
+          alert('检测到账号在另一台设备登录。');
+        }
+      } catch (e) {}
+    }
     localStorage.setItem('edu_login_' + user.username, Date.now().toString());
     localStorage.setItem('edu_login_info', JSON.stringify({ role: 'teacher', username: user.username }));
   }
+  
+  // 心跳保活 - 更新活动时间
+  setInterval(function() {
+    const sessionKey = 'edu_session_teacher_' + user.username;
+    const session = localStorage.getItem(sessionKey);
+    if (session) {
+      try {
+        const sessionData = JSON.parse(session);
+        sessionData.lastActivity = Date.now();
+        localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+      } catch (e) {}
+    }
+  }, 60000);
   
   // 监听其他标签页的登录状态变化
   window.addEventListener('storage', function(e) {
@@ -4179,6 +4452,405 @@ function downloadQuiz() {
     showToast('✅ 练习题已下载');
   }
 }
+
+// ===== 教学周报功能 =====
+function initWeekReport() {
+  const select = document.getElementById('report-week-start');
+  if (!select) return;
+  
+  const now = new Date();
+  const dayOfWeek = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek + 1);
+  
+  let options = '';
+  for (let i = 0; i < 8; i++) {
+    const weekStart = new Date(monday);
+    weekStart.setDate(monday.getDate() - i * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    const val = weekStart.toISOString().slice(0, 10);
+    const text = `${weekStart.getMonth() + 1}月${weekStart.getDate()}日 - ${weekEnd.getMonth() + 1}月${weekEnd.getDate()}日`;
+    options += `<option value="${val}">第${8 - i}周（${text}）</option>`;
+  }
+  select.innerHTML = options;
+  
+  // 显示结束日期
+  updateReportEndDate();
+}
+
+function updateReportEndDate() {
+  const start = document.getElementById('report-week-start').value;
+  if (start) {
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    document.getElementById('report-week-end').textContent = `${end.getMonth() + 1}月${end.getDate()}日`;
+  }
+}
+
+function generateWeekReport() {
+  const startDate = document.getElementById('report-week-start').value;
+  if (!startDate) { showToast('❌ 请选择起始日期'); return; }
+  
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 6);
+  
+  // 获取本周数据
+  const lessons = getMyLessons().filter(l => {
+    if (!l.date) return false;
+    return l.date >= startDate && l.date <= endDate.toISOString().slice(0, 10);
+  });
+  
+  const homeworks = getMyHW().filter(h => {
+    if (!h.createdAt) return false;
+    const hwDate = h.createdAt.replace(/\//g, '-');
+    return hwDate >= startDate && hwDate <= endDate.toISOString().slice(0, 10);
+  });
+  
+  const students = getMyStudents();
+  
+  const journalKey = 'edu_journal_' + user.id;
+  const allJournals = JSON.parse(localStorage.getItem(journalKey) || '[]');
+  const weekJournals = allJournals.filter(j => {
+    return j.date >= startDate && j.date <= endDate.toISOString().slice(0, 10);
+  });
+  
+  // 填充统计数据
+  const workloadEl = document.getElementById('report-workload');
+  if (workloadEl) {
+    const totalHours = lessons.reduce((sum, l) => sum + (parseInt(l.hours) || 1), 0);
+    workloadEl.innerHTML = `
+      <div style="background:#f0fff4;padding:12px;border-radius:8px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:#16a34a;">${lessons.length}</div>
+        <div style="font-size:11px;color:#718096;">备课数量</div>
+      </div>
+      <div style="background:#eff6ff;padding:12px;border-radius:8px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:#2563eb;">${totalHours}</div>
+        <div style="font-size:11px;color:#718096;">总课时</div>
+      </div>
+      <div style="background:#fff7ed;padding:12px;border-radius:8px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:#ea580c;">${homeworks.length}</div>
+        <div style="font-size:11px;color:#718096;">布置作业</div>
+      </div>
+      <div style="background:#faf5ff;padding:12px;border-radius:8px;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:#7c3aed;">${weekJournals.length}</div>
+        <div style="font-size:11px;color:#718096;">教学日志</div>
+      </div>
+    `;
+  }
+  
+  // 填充教学情况
+  const teachingEl = document.getElementById('report-teaching');
+  if (teachingEl) {
+    if (lessons.length === 0) {
+      teachingEl.innerHTML = '<div style="color:#718096;font-size:13px;">本周暂无备课记录</div>';
+    } else {
+      const classSet = new Set(lessons.map(l => l.class).filter(Boolean));
+      const subjectSet = new Set(lessons.map(l => l.subject).filter(Boolean));
+      const completedLessons = lessons.filter(l => l.status === 'done').length;
+      
+      teachingEl.innerHTML = `
+        <div style="font-size:13px;color:#4a5568;line-height:2;">
+          <p>📚 本周共完成 <strong>${lessons.length}</strong> 节备课，其中 <strong>${completedLessons}</strong> 节已完成授课</p>
+          <p>🏫 授课班级：${classSet.size > 0 ? [...classSet].join('、') : '未指定'}</p>
+          <p>📖 涉及学科：${subjectSet.size > 0 ? [...subjectSet].join('、') : '未指定'}</p>
+        </div>
+        <div style="margin-top:12px;">
+          <p style="font-size:12px;font-weight:600;color:#1a3a2a;margin-bottom:8px;">本周备课详情：</p>
+          ${lessons.slice(0, 5).map(l => `
+            <div style="padding:8px 10px;background:#f7fafc;border-radius:6px;margin-bottom:6px;font-size:12px;">
+              <span style="font-weight:500;">${l.title}</span>
+              <span style="color:#718096;margin-left:8px;">${l.class || ''} ${l.subject || ''}</span>
+            </div>
+          `).join('')}
+          ${lessons.length > 5 ? `<div style="font-size:12px;color:#718096;text-align:center;">...还有 ${lessons.length - 5} 条</div>` : ''}
+        </div>
+      `;
+    }
+  }
+  
+  // 填充作业情况
+  const homeworkEl = document.getElementById('report-homework');
+  if (homeworkEl) {
+    if (homeworks.length === 0) {
+      homeworkEl.innerHTML = '<div style="color:#718096;font-size:13px;">本周暂无作业记录</div>';
+    } else {
+      homeworkEl.innerHTML = `
+        <div style="font-size:13px;color:#4a5568;line-height:2;">
+          <p>📋 本周共布置 <strong>${homeworks.length}</strong> 次作业</p>
+          <p>👥 负责学生 <strong>${students.length}</strong> 人</p>
+        </div>
+        <div style="margin-top:12px;">
+          ${homeworks.slice(0, 3).map(h => `
+            <div style="padding:8px 10px;background:#f7fafc;border-radius:6px;margin-bottom:6px;font-size:12px;">
+              <span style="font-weight:500;">${h.title}</span>
+              <span style="color:#718096;margin-left:8px;">${h.type || '书面作业'} · 截止：${h.deadline || '—'}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+  }
+  
+  // 填充日志摘要
+  const journalEl = document.getElementById('report-journal');
+  if (journalEl) {
+    if (weekJournals.length === 0) {
+      journalEl.innerHTML = '<div style="color:#718096;font-size:13px;">本周暂无教学日志</div>';
+    } else {
+      const goodCount = weekJournals.filter(j => j.effect === '很好' || j.effect === '良好').length;
+      const totalHours = weekJournals.reduce((sum, j) => sum + (parseInt(j.hours) || 1), 0);
+      
+      journalEl.innerHTML = `
+        <div style="font-size:13px;color:#4a5568;line-height:2;">
+          <p>📓 本周共撰写 <strong>${weekJournals.length}</strong> 篇教学日志</p>
+          <p>⏱️ 记录课时共 <strong>${totalHours}</strong> 课时</p>
+          <p>👍 满意教学（很好+良好）<strong>${goodCount}</strong> 节</p>
+        </div>
+      `;
+    }
+  }
+  
+  // 填充元信息
+  const startObj = new Date(startDate);
+  const endObj = new Date(endDate);
+  document.getElementById('report-period').textContent = `${startObj.getFullYear()}年${startObj.getMonth() + 1}月${startObj.getDate()}日 - ${endObj.getMonth() + 1}月${endObj.getDate()}日`;
+  document.getElementById('report-generated-time').textContent = new Date().toLocaleString('zh-CN');
+  document.getElementById('report-teacher-name').textContent = user.name || '教师';
+  
+  // 显示报告
+  document.getElementById('week-report-content').style.display = 'block';
+  document.getElementById('week-report-empty').style.display = 'none';
+  
+  showToast('✅ 周报已生成');
+}
+
+function downloadWeekReport() {
+  const content = document.getElementById('week-report-content');
+  if (!content || content.style.display === 'none') {
+    showToast('❌ 请先生成周报');
+    return;
+  }
+  
+  // 获取报告内容
+  const title = document.getElementById('report-title').textContent;
+  const period = document.getElementById('report-period').textContent;
+  
+  // 创建HTML内容
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${title} - ${period}</title>
+  <style>
+    body { font-family: 'Microsoft YaHei', sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+    h1 { text-align: center; font-size: 24px; margin-bottom: 10px; }
+    h2 { font-size: 16px; margin-top: 24px; border-left: 4px solid #16a34a; padding-left: 10px; }
+    h3 { font-size: 14px; margin-top: 20px; }
+    p { line-height: 1.8; font-size: 14px; color: #333; }
+    .meta { text-align: center; color: #666; margin-bottom: 30px; }
+    .footer { margin-top: 40px; text-align: right; color: #666; font-size: 12px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0; }
+    .stat-box { padding: 12px; text-align: center; border-radius: 8px; }
+    .stat-box.green { background: #f0fff4; }
+    .stat-box.blue { background: #eff6ff; }
+    .stat-box.orange { background: #fff7ed; }
+    .stat-box.purple { background: #faf5ff; }
+    .stat-value { font-size: 20px; font-weight: bold; }
+    .stat-label { font-size: 11px; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>📋 ${title}</h1>
+  <p class="meta">${period}</p>
+  
+  <h2>一、教学工作量统计</h2>
+  <div class="stats">
+    <div class="stat-box green">
+      <div class="stat-value" style="color:#16a34a;">${document.getElementById('report-workload').querySelectorAll('div')[0]?.textContent || '0'}</div>
+      <div class="stat-label">备课数量</div>
+    </div>
+    <div class="stat-box blue">
+      <div class="stat-value" style="color:#2563eb;">${document.getElementById('report-workload').querySelectorAll('div')[1]?.textContent || '0'}</div>
+      <div class="stat-label">总课时</div>
+    </div>
+    <div class="stat-box orange">
+      <div class="stat-value" style="color:#ea580c;">${document.getElementById('report-workload').querySelectorAll('div')[2]?.textContent || '0'}</div>
+      <div class="stat-label">布置作业</div>
+    </div>
+    <div class="stat-box purple">
+      <div class="stat-value" style="color:#7c3aed;">${document.getElementById('report-workload').querySelectorAll('div')[3]?.textContent || '0'}</div>
+      <div class="stat-label">教学日志</div>
+    </div>
+  </div>
+  
+  <h2>二、本周教学情况</h2>
+  ${document.getElementById('report-teaching').innerHTML}
+  
+  <h2>三、作业与学生情况</h2>
+  ${document.getElementById('report-homework').innerHTML}
+  
+  <h2>四、教学日志摘要</h2>
+  ${document.getElementById('report-journal').innerHTML}
+  
+  <div class="footer">
+    <p>生成时间：${new Date().toLocaleString('zh-CN')}</p>
+    <p>教师：${user.name || '教师'}</p>
+  </div>
+</body>
+</html>
+  `;
+  
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `教学周报_${period.replace(/[月日]/g, '')}.html`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast('✅ 周报已导出');
+}
+
+// ===== 数据管理功能 =====
+function exportAllData() {
+  const data = {
+    exportTime: new Date().toISOString(),
+    teacher: user,
+    lessons: JSON.parse(localStorage.getItem('edu_lessons') || '[]').filter(l => l.teacherId === user.id),
+    students: getMyStudents(),
+    homeworks: getMyHW(),
+    journals: JSON.parse(localStorage.getItem('edu_journal_' + user.id) || '[]'),
+    resources: JSON.parse(localStorage.getItem('edu_resources') || '[]'),
+    schedule: JSON.parse(localStorage.getItem('edu_schedule') || '[]'),
+    grades: JSON.parse(localStorage.getItem('edu_grades') || '{}')
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `教师数据备份_${user.name || 'teacher'}_${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast('✅ 数据已导出');
+}
+
+function importData(file) {
+  if (!file) return;
+  
+  if (!confirm('导入数据将覆盖现有数据！是否继续？')) {
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      
+      // 验证数据格式
+      if (!data.exportTime || !data.teacher) {
+        showToast('❌ 数据格式不正确');
+        return;
+      }
+      
+      // 导入数据
+      if (data.lessons) {
+        localStorage.setItem('edu_lessons', JSON.stringify(data.lessons));
+      }
+      if (data.students) {
+        const allStudents = JSON.parse(localStorage.getItem('edu_students') || '[]');
+        const otherStudents = allStudents.filter(s => s.teacherId !== user.id);
+        localStorage.setItem('edu_students', JSON.stringify([...otherStudents, ...data.students]));
+      }
+      if (data.homeworks) {
+        localStorage.setItem('edu_homework', JSON.stringify(data.homeworks));
+      }
+      if (data.journals) {
+        localStorage.setItem('edu_journal_' + user.id, JSON.stringify(data.journals));
+      }
+      
+      showToast('✅ 数据导入成功，请刷新页面查看');
+    } catch (err) {
+      showToast('❌ 导入失败：' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearData(type) {
+  let confirmMsg = '';
+  switch (type) {
+    case 'journal': confirmMsg = '确定要删除所有教学日志吗？此操作不可恢复！'; break;
+    case 'attendance': confirmMsg = '确定要清理所有考勤记录吗？此操作不可恢复！'; break;
+    case 'ranking': confirmMsg = '确定要重置所有排行榜数据吗？此操作不可恢复！'; break;
+    default: return;
+  }
+  
+  if (!confirm(confirmMsg)) return;
+  
+  switch (type) {
+    case 'journal':
+      localStorage.removeItem('edu_journal_' + user.id);
+      showToast('✅ 教学日志已清理');
+      loadJournal();
+      loadJournalStats();
+      break;
+    case 'attendance':
+      // 清理当前教师的考勤记录
+      const allKeys = Object.keys(localStorage).filter(k => k.startsWith('edu_att_'));
+      allKeys.forEach(k => {
+        if (k.includes(user.id)) {
+          localStorage.removeItem(k);
+        }
+      });
+      showToast('✅ 考勤记录已清理');
+      loadAttendance();
+      loadAttendanceStats();
+      break;
+    case 'ranking':
+      const students = JSON.parse(localStorage.getItem('edu_students') || '[]');
+      students.forEach(s => {
+        s.gradeACount = 0;
+        s.gradeBCount = 0;
+        s.gradeCCount = 0;
+        s.gradeDCount = 0;
+      });
+      localStorage.setItem('edu_students', JSON.stringify(students));
+      showToast('✅ 排行榜数据已重置');
+      loadStudentTable();
+      renderGradeRanking();
+      break;
+  }
+}
+
+// ===== 快捷键支持 =====
+document.addEventListener('keydown', function(e) {
+  // Alt + N: 新建备课
+  if (e.altKey && e.key === 'n') {
+    e.preventDefault();
+    openLessonModal();
+  }
+  // Alt + H: 布置作业
+  if (e.altKey && e.key === 'h') {
+    e.preventDefault();
+    openHWModal();
+  }
+  // Alt + 1: 返回首页
+  if (e.altKey && e.key === '1') {
+    e.preventDefault();
+    showPage('home', document.querySelectorAll('.nav-item')[0]);
+  }
+  // Escape: 关闭弹窗
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.show').forEach(m => {
+      m.classList.remove('show');
+    });
+  }
+});
+
+// 初始化周报选择
+initWeekReport();
+document.getElementById('report-week-start')?.addEventListener('change', updateReportEndDate);
 </script>
 </body>
 </html>

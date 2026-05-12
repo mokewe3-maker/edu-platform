@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>惠教资源平台 - 登录</title>
+<title>专业辅助教师教学平台 - 登录</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:;">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -125,6 +129,7 @@
   }
   .btn-login:hover { opacity: 0.9; transform: translateY(-1px); }
   .btn-login:active { transform: translateY(0); }
+  .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
   .error-msg {
     background: #fef0f0;
     border: 1px solid #fcc;
@@ -158,8 +163,8 @@
 <div class="login-container">
   <div class="logo-area">
     <div class="logo-icon">📚</div>
-    <h1>惠教资源平台</h1>
-    <p>让教育更高效，让学习更精彩</p>
+    <h1>专业辅助教师教学平台</h1>
+    <p>让教育更高效，让教学更精彩</p>
   </div>
 
   <div class="tab-group">
@@ -173,7 +178,7 @@
     <label>账号</label>
     <div class="input-icon">
       <span class="icon">👤</span>
-      <input type="text" id="username" placeholder="请输入账号" autocomplete="off">
+      <input type="text" id="username" placeholder="请输入账号" autocomplete="off" spellcheck="false">
     </div>
   </div>
 
@@ -181,163 +186,327 @@
     <label>密码</label>
     <div class="input-icon">
       <span class="icon">🔒</span>
-      <input type="password" id="password" placeholder="请输入密码">
+      <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password">
     </div>
   </div>
 
-  <button class="btn-login" onclick="doLogin()">登 录</button>
+  <button class="btn-login" id="login-btn" onclick="doLogin()">登 录</button>
 
-  <div class="footer-tip">© 2026 惠教资源平台 · 让每一堂课都更精彩</div>
+  <div class="footer-tip">© 2026 专业辅助教师教学平台 · 专注教学辅助</div>
 </div>
 
 <script>
-  let currentRole = 'admin';
+// ===== 安全防护 =====
+(function() {
+  // 防止开发者工具快捷键
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'u')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+  
+  // 禁用右键菜单
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+  });
+  
+  // 防复制
+  document.addEventListener('copy', function(e) {
+    e.preventDefault();
+  });
+})();
 
-  // 初始化默认数据
-  function initData() {
-    if (!localStorage.getItem('edu_admin')) {
-      localStorage.setItem('edu_admin', JSON.stringify({
-        username: 'admin',
-        password: 'admin123',
-        name: '超级管理员'
-      }));
-    }
-    if (!localStorage.getItem('edu_teachers')) {
-      localStorage.setItem('edu_teachers', JSON.stringify([
-        {
-          id: 't001',
-          username: 'teacher1',
-          password: 'teacher123',
-          name: '张老师',
-          subject: '数学',
-          classes: ['初一(1)班', '初一(2)班'],
-          avatar: '张',
-          email: 'zhang@school.edu',
-          phone: '138****0001',
-          createdAt: '2026-01-01'
-        }
-      ]));
-    }
-    if (!localStorage.getItem('edu_lessons')) {
-      localStorage.setItem('edu_lessons', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('edu_students')) {
-      localStorage.setItem('edu_students', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('edu_homework')) {
-      localStorage.setItem('edu_homework', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('edu_resources')) {
-      localStorage.setItem('edu_resources', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('edu_announcements')) {
-      localStorage.setItem('edu_announcements', JSON.stringify([]));
-    }
+let currentRole = 'admin';
+let loginAttempts = 0;
+const MAX_LOGIN_ATTEMPTS = 5;
+let lockoutUntil = 0;
+
+// ===== 设备指纹生成 =====
+function generateDeviceId() {
+  const stored = localStorage.getItem('edu_device_id');
+  if (stored) return stored;
+  
+  const nav = navigator;
+  const screen = window.screen;
+  const deviceInfo = [
+    nav.userAgent,
+    nav.language,
+    nav.platform,
+    screen.width,
+    screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset()
+  ].join('|');
+  
+  // 简单哈希
+  let hash = 0;
+  for (let i = 0; i < deviceInfo.length; i++) {
+    const char = deviceInfo.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
   }
+  
+  const deviceId = 'dev_' + Math.abs(hash).toString(36) + '_' + Date.now().toString(36);
+  localStorage.setItem('edu_device_id', deviceId);
+  return deviceId;
+}
 
-  function switchTab(role) {
-    currentRole = role;
-    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-      btn.classList.toggle('active', (i === 0 && role === 'admin') || (i === 1 && role === 'teacher'));
-    });
-    document.getElementById('error-msg').style.display = 'none';
-    // 自动填充已保存的教师账号
-    tryAutoFill(role);
+const deviceId = generateDeviceId();
+
+// 初始化默认数据
+function initData() {
+  if (!localStorage.getItem('edu_admin')) {
+    localStorage.setItem('edu_admin', JSON.stringify({
+      username: 'admin',
+      password: 'admin123',
+      name: '超级管理员'
+    }));
   }
+  if (!localStorage.getItem('edu_teachers')) {
+    localStorage.setItem('edu_teachers', JSON.stringify([
+      {
+        id: 't001',
+        username: 'teacher1',
+        password: 'teacher123',
+        name: '张老师',
+        subject: '数学',
+        classes: ['初一(1)班', '初一(2)班'],
+        avatar: '张',
+        email: 'zhang@school.edu',
+        phone: '138****0001',
+        createdAt: '2026-01-01'
+      }
+    ]));
+  }
+  if (!localStorage.getItem('edu_lessons')) {
+    localStorage.setItem('edu_lessons', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('edu_students')) {
+    localStorage.setItem('edu_students', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('edu_homework')) {
+    localStorage.setItem('edu_homework', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('edu_resources')) {
+    localStorage.setItem('edu_resources', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('edu_announcements')) {
+    localStorage.setItem('edu_announcements', JSON.stringify([]));
+  }
+}
 
-  function tryAutoFill(role) {
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-    if (role === 'teacher') {
-      // 查找所有已保存的教师账号
-      const teachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
-      for (const t of teachers) {
-        const saved = localStorage.getItem('edu_saved_' + t.username);
-        if (saved) {
-          const info = JSON.parse(saved);
-          document.getElementById('username').value = info.username;
-          document.getElementById('password').value = info.password;
-          break;
-        }
+function switchTab(role) {
+  currentRole = role;
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && role === 'admin') || (i === 1 && role === 'teacher'));
+  });
+  document.getElementById('error-msg').style.display = 'none';
+  // 自动填充已保存的教师账号
+  tryAutoFill(role);
+}
+
+function tryAutoFill(role) {
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+  if (role === 'teacher') {
+    // 查找所有已保存的教师账号
+    const teachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
+    for (const t of teachers) {
+      const saved = localStorage.getItem('edu_saved_' + t.username);
+      if (saved) {
+        const info = JSON.parse(saved);
+        document.getElementById('username').value = info.username;
+        document.getElementById('password').value = info.password;
+        break;
       }
     }
   }
+}
 
-  function doLogin() {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
-    const errorEl = document.getElementById('error-msg');
+// ===== 增强的登录锁定检测 =====
+function checkLoginLockout() {
+  if (Date.now() < lockoutUntil) {
+    const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+    document.getElementById('error-msg').textContent = '登录失败次数过多，请 ' + remaining + ' 秒后重试';
+    document.getElementById('error-msg').style.display = 'block';
+    document.getElementById('login-btn').disabled = true;
+    setTimeout(checkLoginLockout, 1000);
+    return true;
+  }
+  document.getElementById('login-btn').disabled = false;
+  return false;
+}
 
-    if (!username || !password) {
-      errorEl.textContent = '请填写账号和密码';
-      errorEl.style.display = 'block';
-      return;
+// ===== 检查账号是否在其他设备登录 =====
+function checkOtherDeviceLogin(username, role) {
+  const key = 'edu_session_' + role + '_' + username;
+  const session = localStorage.getItem(key);
+  
+  if (session) {
+    try {
+      const sessionData = JSON.parse(session);
+      // 检查是否超时（默认30分钟无操作视为离线）
+      const timeout = 30 * 60 * 1000;
+      if (Date.now() - sessionData.lastActivity < timeout) {
+        // 同一设备允许
+        if (sessionData.deviceId === deviceId) {
+          return { conflict: false, forceLogin: true };
+        }
+        // 不同设备，需要确认
+        return { conflict: true, sessionData };
+      }
+    } catch (e) {
+      // 解析失败，当作无冲突处理
     }
+  }
+  return { conflict: false, forceLogin: false };
+}
 
+// ===== 创建会话 =====
+function createSession(username, role, targetPage) {
+  const key = 'edu_session_' + role + '_' + username;
+  const sessionData = {
+    deviceId: deviceId,
+    loginTime: Date.now(),
+    lastActivity: Date.now(),
+    userAgent: navigator.userAgent.substring(0, 100)
+  };
+  localStorage.setItem(key, JSON.stringify(sessionData));
+  
+  // 同时设置登录标记
+  localStorage.setItem('edu_login_' + username, Date.now().toString());
+  localStorage.setItem('edu_login_info', JSON.stringify({ role: role, username: username }));
+  
+  return sessionData;
+}
+
+function doLogin() {
+  // 检查登录锁定
+  if (checkLoginLockout()) return;
+  
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const errorEl = document.getElementById('error-msg');
+  const loginBtn = document.getElementById('login-btn');
+
+  if (!username || !password) {
+    errorEl.textContent = '请填写账号和密码';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  // 防暴力破解：延迟响应
+  loginBtn.disabled = true;
+  
+  setTimeout(() => {
     if (currentRole === 'admin') {
       const admin = JSON.parse(localStorage.getItem('edu_admin') || '{}');
+      
+      // 检查其他设备登录
+      const otherLogin = checkOtherDeviceLogin(username, 'admin');
+      if (otherLogin.conflict) {
+        errorEl.textContent = '该账号已在其他设备登录。如需强制登录，请先在原设备退出。';
+        errorEl.style.display = 'block';
+        loginBtn.disabled = false;
+        return;
+      }
+      
       if (admin.username === username && admin.password === password) {
         sessionStorage.setItem('edu_current_user', JSON.stringify({ role: 'admin', ...admin }));
-        // 设置登录标记，用于多开检测
-        localStorage.setItem('edu_login_' + username, Date.now().toString());
-        localStorage.setItem('edu_login_info', JSON.stringify({ role: 'admin', username: username }));
+        createSession(username, 'admin', 'admin.html');
         window.location.href = 'admin.html';
       } else {
-        errorEl.textContent = '管理员账号或密码错误';
-        errorEl.style.display = 'block';
+        handleLoginFailure(errorEl, loginBtn);
       }
     } else {
       const teachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
       const teacher = teachers.find(t => t.username === username && t.password === password);
+      
       if (teacher) {
+        // 检查其他设备登录
+        const otherLogin = checkOtherDeviceLogin(username, 'teacher');
+        if (otherLogin.conflict) {
+          errorEl.textContent = '该账号已在其他设备登录。如需强制登录，请先在原设备退出。';
+          errorEl.style.display = 'block';
+          loginBtn.disabled = false;
+          return;
+        }
+        
         sessionStorage.setItem('edu_current_user', JSON.stringify({ role: 'teacher', ...teacher }));
-        // 设置登录标记，用于多开检测
-        localStorage.setItem('edu_login_' + username, Date.now().toString());
-        localStorage.setItem('edu_login_info', JSON.stringify({ role: 'teacher', username: username }));
+        createSession(username, 'teacher', 'teacher.html');
         window.location.href = 'teacher.html';
       } else {
-        errorEl.textContent = '教师账号或密码错误';
-        errorEl.style.display = 'block';
+        handleLoginFailure(errorEl, loginBtn);
       }
+    }
+  }, 300); // 300ms延迟，防止暴力破解
+}
+
+function handleLoginFailure(errorEl, loginBtn) {
+  loginAttempts++;
+  if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+    lockoutUntil = Date.now() + (loginAttempts - MAX_LOGIN_ATTEMPTS + 1) * 30000;
+    errorEl.textContent = '登录失败次数过多，请 ' + Math.ceil((lockoutUntil - Date.now()) / 1000) + ' 秒后重试';
+    checkLoginLockout();
+  } else {
+    errorEl.textContent = '账号或密码错误，剩余 ' + (MAX_LOGIN_ATTEMPTS - loginAttempts) + ' 次尝试机会';
+  }
+  errorEl.style.display = 'block';
+  loginBtn.disabled = false;
+}
+
+// ===== 心跳保活 =====
+setInterval(function() {
+  // 更新所有活跃会话的最后活动时间
+  const allKeys = Object.keys(localStorage).filter(k => k.startsWith('edu_session_'));
+  allKeys.forEach(key => {
+    try {
+      const data = JSON.parse(localStorage.getItem(key));
+      if (Date.now() - data.lastActivity < 60 * 60 * 1000) { // 只更新1小时内的会话
+        data.lastActivity = Date.now();
+        localStorage.setItem(key, JSON.stringify(data));
+      }
+    } catch (e) {}
+  });
+}, 60000); // 每分钟更新
+
+// 检测是否在其他地方已登录（多开检测）
+function checkMultiLogin() {
+  const loginInfo = localStorage.getItem('edu_login_info');
+  if (loginInfo) {
+    const info = JSON.parse(loginInfo);
+    const loginTime = localStorage.getItem('edu_login_' + info.username);
+    // 如果登录时间超过24小时，清除标记
+    if (loginTime && Date.now() - parseInt(loginTime) > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('edu_login_info');
+      localStorage.removeItem('edu_login_' + info.username);
+      return;
     }
   }
+}
+checkMultiLogin();
 
-  // 检测是否在其他地方已登录（多开检测）
-  function checkMultiLogin() {
-    const loginInfo = localStorage.getItem('edu_login_info');
-    if (loginInfo) {
-      const info = JSON.parse(loginInfo);
-      const loginTime = localStorage.getItem('edu_login_' + info.username);
-      // 如果登录时间超过24小时，清除标记
-      if (loginTime && Date.now() - parseInt(loginTime) > 24 * 60 * 60 * 1000) {
-        localStorage.removeItem('edu_login_info');
-        localStorage.removeItem('edu_login_' + info.username);
-        return;
-      }
+// 监听其他标签页的登录状态变化
+window.addEventListener('storage', function(e) {
+  if (e.key === 'edu_login_info' && e.newValue) {
+    const newInfo = JSON.parse(e.newValue);
+    // 如果检测到其他标签页登录了不同账号，提示并跳转
+    const username = document.getElementById('username').value.trim();
+    if (username && newInfo.username !== username) {
+      alert('您的账号 ' + username + ' 已在其他浏览器标签页登录。同一账号不能同时在多个标签页登录。');
+      window.location.href = 'index.html';
     }
   }
-  checkMultiLogin();
+});
 
-  // 监听其他标签页的登录状态变化
-  window.addEventListener('storage', function(e) {
-    if (e.key === 'edu_login_info' && e.newValue) {
-      const newInfo = JSON.parse(e.newValue);
-      // 如果检测到其他标签页登录了不同账号，提示并跳转
-      const username = document.getElementById('username').value.trim();
-      if (username && newInfo.username !== username) {
-        alert('您的账号 ' + username + ' 已在其他浏览器标签页登录。同一账号不能同时在多个标签页登录。');
-        window.location.href = 'index.html';
-      }
-    }
-  });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
-
-  initData();
-  // 页面加载时如果是教师tab，检测是否有保存的账号
-  tryAutoFill('admin');
+initData();
+// 页面加载时如果是教师tab，检测是否有保存的账号
+tryAutoFill('admin');
 </script>
 </body>
 </html>
