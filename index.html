@@ -254,13 +254,24 @@ function generateDeviceId() {
 
 const deviceId = generateDeviceId();
 
-// 初始化默认数据
+// ===== 密码哈希函数 =====
+function simpleHash(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+// ===== 初始化默认数据（密码哈希存储）=====
 function initData() {
   if (!localStorage.getItem('edu_admin')) {
     localStorage.setItem('edu_admin', JSON.stringify({
       username: 'admin',
-      password: 'admin123',
-      name: '超级管理员'
+      passwordHash: simpleHash('admin123'), // 哈希存储，不暴露明文
+      name: '超级管理员',
+      initialized: true
     }));
   }
   if (!localStorage.getItem('edu_teachers')) {
@@ -268,14 +279,15 @@ function initData() {
       {
         id: 't001',
         username: 'teacher1',
-        password: 'teacher123',
+        passwordHash: simpleHash('teacher123'), // 哈希存储
         name: '张老师',
         subject: '数学',
         classes: ['初一(1)班', '初一(2)班'],
         avatar: '张',
         email: 'zhang@school.edu',
         phone: '138****0001',
-        createdAt: '2026-01-01'
+        createdAt: '2026-01-01',
+        initialized: true
       }
     ]));
   }
@@ -294,6 +306,20 @@ function initData() {
   if (!localStorage.getItem('edu_announcements')) {
     localStorage.setItem('edu_announcements', JSON.stringify([]));
   }
+  if (!localStorage.getItem('edu_attendance')) {
+    localStorage.setItem('edu_attendance', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('edu_teaching_logs')) {
+    localStorage.setItem('edu_teaching_logs', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('edu_weekly_reports')) {
+    localStorage.setItem('edu_weekly_reports', JSON.stringify([]));
+  }
+}
+
+// ===== 密码验证 =====
+function verifyPassword(inputPassword, storedHash) {
+  return simpleHash(inputPassword) === storedHash;
 }
 
 function switchTab(role) {
@@ -412,8 +438,11 @@ function doLogin() {
         return;
       }
       
-      if (admin.username === username && admin.password === password) {
-        sessionStorage.setItem('edu_current_user', JSON.stringify({ role: 'admin', ...admin }));
+      // 验证密码（使用哈希比较）
+      const valid = admin.passwordHash && verifyPassword(password, admin.passwordHash);
+      
+      if ((admin.username === username) && valid) {
+        sessionStorage.setItem('edu_current_user', JSON.stringify({ role: 'admin', username: admin.username, name: admin.name }));
         createSession(username, 'admin', 'admin.html');
         window.location.href = 'admin.html';
       } else {
@@ -421,21 +450,28 @@ function doLogin() {
       }
     } else {
       const teachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
-      const teacher = teachers.find(t => t.username === username && t.password === password);
+      const teacher = teachers.find(t => t.username === username);
       
       if (teacher) {
-        // 检查其他设备登录
-        const otherLogin = checkOtherDeviceLogin(username, 'teacher');
-        if (otherLogin.conflict) {
-          errorEl.textContent = '该账号已在其他设备登录。如需强制登录，请先在原设备退出。';
-          errorEl.style.display = 'block';
-          loginBtn.disabled = false;
-          return;
-        }
+        // 验证密码（使用哈希比较）
+        const valid = teacher.passwordHash && verifyPassword(password, teacher.passwordHash);
         
-        sessionStorage.setItem('edu_current_user', JSON.stringify({ role: 'teacher', ...teacher }));
-        createSession(username, 'teacher', 'teacher.html');
-        window.location.href = 'teacher.html';
+        if (valid) {
+          // 检查其他设备登录
+          const otherLogin = checkOtherDeviceLogin(username, 'teacher');
+          if (otherLogin.conflict) {
+            errorEl.textContent = '该账号已在其他设备登录。如需强制登录，请先在原设备退出。';
+            errorEl.style.display = 'block';
+            loginBtn.disabled = false;
+            return;
+          }
+          
+          sessionStorage.setItem('edu_current_user', JSON.stringify({ role: 'teacher', ...teacher }));
+          createSession(username, 'teacher', 'teacher.html');
+          window.location.href = 'teacher.html';
+        } else {
+          handleLoginFailure(errorEl, loginBtn);
+        }
       } else {
         handleLoginFailure(errorEl, loginBtn);
       }
