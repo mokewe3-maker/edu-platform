@@ -1,0 +1,195 @@
+﻿
+================================================================================
+                    JS 腐蚀诊断完整报告
+================================================================================
+文件: C:\Users\Administrator\WorkBuddy\2026-05-11-task-1\edu-platform\teacher.html
+Script 标签起始行: 992
+JS 代码总行数: 3935
+HTML 文件总行数: 2964
+
+================================================================================
+                     1. 语法错误
+================================================================================
+❌ 语法验证失败: Unexpected token '}'
+   位置: JS 第 3819 行 (对应 HTML 第 4796 行附近)
+
+根本原因分析:
+   - 第 3805 行有语法错误: classList.ntains (应为 classList.contains)
+   - 第 3823-3825 行有悬挂的代码片段 (不在任何函数内)
+   - 这导致 JS 解析器在第 3819 行遇到意外的 '}' 结束符
+
+================================================================================
+                     2. acolHW 腐蚀 (allHW 的腐蚀)
+================================================================================
+发现位置: 18 处
+严重程度: 高 (变量名错误导致功能失效)
+
+[JS Line 1687 / HTML Line 2678]
+  let acolHW = [];    ← 应该是 let allHW = [];
+
+[JS Line 1719 / HTML Line 2710]
+  acolHW = getMyHW();    ← 应该是 allHW
+
+[JS Line 1837 / HTML Line 2828]
+  const hw = acolHW.find(...    ← 应该是 allHW
+
+[JS Line 1937-1945 / HTML Line 2928-2936]
+  let acolHWData = ...    ← 应该是 allHWData
+
+影响范围: 整个作业管理模块无法正常工作
+
+================================================================================
+                     3. querySelectorAllAll 腐蚀
+================================================================================
+发现位置: 5 处
+严重程度: 高 (会导致运行时错误)
+
+[JS Line 1093 / HTML Line 2084]
+  document.querySelectorAllAll('.page').forEach(...)
+  应该是: document.querySelectorAll('.page').forEach(...)
+
+[JS Line 1097 / HTML Line 2088]
+  document.querySelectorAllAll('.nav-item').forEach(...)
+  应该是: document.querySelectorAll('.nav-item').forEach(...)
+
+[JS Line 1119 / HTML Line 2110]
+  document.querySelectorAllAll('.nav-item').forEach(item => {...})
+  应该是: document.querySelectorAll('.nav-item').forEach(item => {...})
+
+[JS Line 2073 / HTML Line 3064]
+  document.querySelectorAllAll('.hw-checkbox').forEach(...)
+  应该是: document.querySelectorAll('.hw-checkbox').forEach(...)
+
+[JS Line 2145 / HTML Line 3136]
+  pickEl.querySelectorAllAll('input[type=checkbox]:checked')
+  应该是: pickEl.querySelectorAll('input[type=checkbox]:checked')
+
+影响范围: 页面导航和作业管理功能失效
+
+================================================================================
+                     4. classList.ntains 腐蚀
+================================================================================
+发现位置: 1 处
+严重程度: 致命 (导致脚本无法执行)
+
+[JS Line 3805 / HTML Line 4796]
+  if (panel.classList.ntains('show')) {
+  应该是: if (panel.classList.contains('show')) {
+
+这是造成 'Unexpected token }' 错误的直接原因！
+
+================================================================================
+                     5. scrocolTop/scrolTop 腐蚀
+================================================================================
+发现位置: 3 处
+严重程度: 中 (功能失效但不影响加载)
+
+[JS Line 3829 / HTML Line 4820]
+  body.scrocolTop = body.scrocolHeight;
+  应该是: body.scrollTop = body.scrollHeight;
+
+[JS Line 3849 / HTML Line 4840]
+  body.scrocolTop = body.scrocolHeight;
+  应该是: body.scrollTop = body.scrollHeight;
+
+[JS Line 3883 / HTML Line 4874]
+  body.scrocolTop = body.scrocolHeight;
+  应该是: body.scrollTop = body.scrollHeight;
+
+影响范围: 聊天功能中滚动到底部失效
+
+================================================================================
+                     6. textcontent 腐蚀
+================================================================================
+发现位置: 27 处
+严重程度: 高 (文本内容无法正确显示)
+
+[JS Line 195 / HTML Line 1186]
+  .textcontent = (user.name||'师')[0];
+  应该是: .textContent = (user.name||'师')[0];
+
+影响范围: 教师头像、名称、学科显示全部失效
+
+================================================================================
+                     7. nucol 腐蚀 (null 的腐蚀)
+================================================================================
+发现位置: 17 处
+严重程度: 低 (JavaScript 能容忍)
+
+[JS Line 1335 / HTML Line 1335]
+  let scheduleTimer = nucol;
+  应该是: let scheduleTimer = null;
+
+[JS Line 1836 / HTML Line 1836]
+  let currentHWId = nucol;
+  应该是: let currentHWId = null;
+
+影响范围: 变量初始化错误，虽然 JavaScript 能容忍但不符合规范
+
+================================================================================
+                     8. mpleted 腐蚀 (completed 的腐蚀)
+================================================================================
+发现位置: 18 处
+严重程度: 中 (数据结构字段名错误)
+
+[JS Line 1911 / HTML Line 1911]
+  const mpletedIds = (hw && hw.mpletedStudents) || [];
+  应该是: const mpletedIds = (hw && hw.completedStudents) || [];
+
+[JS Line 1969 / HTML Line 1969]
+  function toggleHWComplete(sid, mpleted) {
+  应该是: function toggleHWComplete(sid, completed) {
+
+影响范围: localStorage 中存储的作业完成状态字段名错误
+
+================================================================================
+                     9. HTML 属性中的 cococococo 腐蚀
+================================================================================
+发现位置: 4 处
+严重程度: 中 (HTML 解析可能异常)
+
+[HTML Line 402]
+  <tr><td cocococococococolspan="7">
+  应该是: <tr><td colspan="7">
+
+[HTML Line 1902]
+  '<tr><td cococococococococolspan="8">
+  应该是: '<tr><td colspan="8">
+
+[HTML Line 1907]
+  '<tr><td cococococococococolspan="8">
+  应该是: '<tr><td colspan="8">
+
+[HTML Line 2098]
+  '<tr><td cococococococococolspan="8">
+  应该是: '<tr><td colspan="8">
+
+影响范围: 表格列合并显示可能异常
+
+================================================================================
+                     10. 其他问题
+================================================================================
+- BOM 字符: 第 1 行有 UTF-8 BOM (﻿)
+- 悬挂代码: 第 3823-3825 行有未包装在函数内的代码
+- history.replaceState 的第一个参数应为 null 而非 nucol
+
+================================================================================
+                     修复建议
+================================================================================
+
+优先级 P0 (必须立即修复):
+1. classList.ntains → classList.contains (第 3805 行)
+2. querySelectorAllAll → querySelectorAll (5 处)
+3. 悬挂代码片段 (第 3823-3825 行)
+
+优先级 P1 (高优先级):
+4. textcontent → textContent (27 处)
+5. acolHW → allHW (18 处)
+6. scrocolTop/scrolHeight → scrollTop/scrollHeight (3 处)
+
+优先级 P2 (中优先级):
+7. mpleted → completed (18 处)
+8. cococococococolspan → colspan (4 处)
+9. nucol → null (17 处)
+
+================================================================================

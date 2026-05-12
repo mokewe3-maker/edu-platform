@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>惠教资源平台 - 管理员后台</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background:#f0f4f8; color:#333; display:flex; min-height:100vh; }
+
+/* 侧边栏 */
+.sidebar { width:220px; background:#1a2340; display:flex; flex-direction:column; position:fixed; top:0; left:0; height:100vh; z-index:100; }
+.sidebar-logo { padding:24px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
+.sidebar-logo .platform-name { font-size:16px; font-weight:700; color:#fff; }
+.sidebar-logo .role-tag { font-size:11px; color:#a0aec0; margin-top:4px; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:20px; display:inline-block; }
+.nav-section { padding:16px 12px 8px; }
+.nav-section-title { font-size:11px; color:#4a5568; font-weight:600; letter-spacing:1px; padding:0 8px; margin-bottom:8px; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:14px; color:#a0aec0; transition:all 0.2s; margin-bottom:2px; }
+.nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
+.nav-item.active { background:linear-gradient(135deg,#1a73e8,#0d47a1); color:#fff; }
+.nav-item .nav-icon { font-size:16px; width:20px; text-align:center; }
+.sidebar-footer { margin-top:auto; padding:16px; border-top:1px solid rgba(255,255,255,0.08); }
+.user-info { display:flex; align-items:center; gap:10px; }
+.user-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#1a73e8,#0d47a1); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:600; }
+.user-name { font-size:13px; color:#e2e8f0; font-weight:500; }
+.user-role { font-size:11px; color:#718096; }
+.btn-logout { background:none; border:1px solid rgba(255,255,255,0.2); color:#a0aec0; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; margin-top:8px; width:100%; transition:all 0.2s; }
+.btn-logout:hover { background:rgba(255,255,255,0.1); color:#fff; }
+
+/* 主内容区 */
+.main-content { margin-left:220px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
+.topbar { background:#fff; padding:0 28px; height:60px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #e8ecf0; position:sticky; top:0; z-index:90; }
+.topbar-title { font-size:16px; font-weight:600; color:#1a2340; }
+.topbar-right { display:flex; align-items:center; gap:16px; font-size:13px; color:#666; }
+.page-content { padding:28px; flex:1; }
+
+/* 页面 */
+.page { display:none; }
+.page.active { display:block; }
+
+/* 卡片 */
+.card { background:#fff; border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid #edf2f7; }
+.card-title { font-size:15px; font-weight:600; color:#1a2340; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+
+/* 统计卡片 */
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.stat-card { background:#fff; border-radius:12px; padding:20px; border:1px solid #edf2f7; }
+.stat-label { font-size:12px; color:#718096; margin-bottom:8px; }
+.stat-value { font-size:28px; font-weight:700; color:#1a2340; }
+.stat-sub { font-size:12px; color:#48bb78; margin-top:4px; }
+.stat-icon { font-size:28px; float:right; margin-top:-36px; }
+
+/* 按钮 */
+.btn { padding:9px 18px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:none; transition:all 0.2s; font-family:inherit; }
+.btn-primary { background:#1a73e8; color:#fff; }
+.btn-primary:hover { background:#1557b0; }
+.btn-success { background:#38a169; color:#fff; }
+.btn-success:hover { background:#2f8558; }
+.btn-danger { background:#e53e3e; color:#fff; }
+.btn-danger:hover { background:#c53030; }
+.btn-outline { background:#fff; border:1.5px solid #e2e8f0; color:#444; }
+.btn-outline:hover { border-color:#1a73e8; color:#1a73e8; }
+.btn-sm { padding:6px 12px; font-size:12px; }
+
+/* 表格 */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+thead th { background:#f7fafc; padding:12px 16px; text-align:left; font-size:12px; font-weight:600; color:#718096; border-bottom:1px solid #e8ecf0; text-transform:uppercase; letter-spacing:0.5px; }
+tbody td { padding:14px 16px; font-size:13px; border-bottom:1px solid #f0f4f8; color:#4a5568; }
+tbody tr:hover { background:#f7fafc; }
+tbody tr:last-child td { border-bottom:none; }
+.badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-blue { background:#ebf4ff; color:#3182ce; }
+.badge-green { background:#f0fff4; color:#38a169; }
+.badge-gray { background:#f7fafc; color:#718096; }
+
+/* 模态框 */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal { background:#fff; border-radius:16px; padding:28px; width:480px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.15); }
+.modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+.modal-title { font-size:16px; font-weight:600; color:#1a2340; }
+.modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:#999; line-height:1; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-group { margin-bottom:18px; }
+.form-group label { display:block; font-size:13px; font-weight:500; color:#4a5568; margin-bottom:6px; }
+.form-group input, .form-group select { width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; color:#333; outline:none; font-family:inherit; transition:border-color 0.2s; }
+.form-group input:focus, .form-group select:focus { border-color:#1a73e8; }
+.form-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:8px; }
+
+/* 搜索栏 */
+.toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:12px; }
+.search-input { padding:9px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; width:260px; font-family:inherit; }
+.search-input:focus { border-color:#1a73e8; }
+
+/* 空状态 */
+.empty-state { text-align:center; padding:48px 20px; color:#a0aec0; }
+.empty-state .empty-icon { font-size:48px; margin-bottom:12px; }
+.empty-state p { font-size:14px; }
+
+/* 通知 */
+.toast { position:fixed; bottom:28px; right:28px; background:#1a2340; color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; z-index:9999; opacity:0; transform:translateY(10px); transition:all 0.3s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+
+/* 活动日志 */
+.log-item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #f0f4f8; }
+.log-dot { width:8px; height:8px; border-radius:50%; background:#1a73e8; margin-top:5px; flex-shrink:0; }
+.log-content { font-size:13px; color:#4a5568; }
+.log-time { font-size:11px; color:#a0aec0; margin-top:2px; }
+</style>
+</head>
+<body>
+
+<!-- 侧边栏 -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="platform-name">📚 惠教资源平台</div>
+    <div class="role-tag">管理员后台</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">主菜单</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span> 数据总览
+    </div>
+    <div class="nav-item" onclick="showPage('teachers')">
+      <span class="nav-icon">👩‍🏫</span> 教师管理
+    </div>
+    <div class="nav-item" onclick="showPage('classes')">
+      <span class="nav-icon">🏫</span> 班级管理
+    </div>
+    <div class="nav-item" onclick="showPage('announce')">
+      <span class="nav-icon">📢</span> 系统公告
+    </div>
+    <div class="nav-item" onclick="showPage('settings')">
+      <span class="nav-icon">⚙️</span> 系统设置
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar" id="adminAvatar">管</div>
+      <div>
+        <div class="user-name" id="adminName">管理员</div>
+        <div class="user-role">系统管理员</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<!-- 主内容 -->
+<div class="main-content">
+  <div class="topbar">
+    <div class="topbar-title" id="pageTitle">数据总览</div>
+    <div class="topbar-right">
+      <span id="currentTime"></span>
+      <span>👋 欢迎，<span id="adminNameTop">管理员</span></span>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- 数据总览 -->
+    <div class="page active" id="page-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">教师总数</div>
+          <div class="stat-value" id="stat-teachers">0</div>
+          <div class="stat-sub">已注册教师</div>
+          <div class="stat-icon">👩‍🏫</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">班级总数</div>
+          <div class="stat-value" id="stat-classes">0</div>
+          <div class="stat-sub">全校班级</div>
+          <div class="stat-icon">🏫</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">学生总数</div>
+          <div class="stat-value" id="stat-students">0</div>
+          <div class="stat-sub">在校学生</div>
+          <div class="stat-icon">🎓</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">备课数量</div>
+          <div class="stat-value" id="stat-lessons">0</div>
+          <div class="stat-sub">教师备课记录</div>
+          <div class="stat-icon">📝</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:2fr 1fr; gap:20px;">
+        <div class="card">
+          <div class="card-title">👩‍🏫 最近添加的教师</div>
+          <div id="recent-teachers-list">
+            <div class="empty-state"><div class="empty-icon">👩‍🏫</div><p>暂无教师数据</p></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 最近操作记录</div>
+          <div id="activity-log">
+            <div class="log-item"><div class="log-dot"></div><div><div class="log-content">系统初始化完成</div><div class="log-time">刚刚</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 教师管理 -->
+    <div class="page" id="page-teachers">
+      <div class="card">
+        <div class="toolbar">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <input class="search-input" type="text" placeholder="🔍 搜索教师姓名/账号/学科..." oninput="searchTeachers(this.value)">
+          </div>
+          <button class="btn btn-primary" onclick="openTeacherModal()">+ 添加教师</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>教师信息</th>
+                <th>账号</th>
+                <th>任课学科</th>
+                <th>负责班级</th>
+                <th>联系方式</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="teacher-table-body">
+              <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👩‍🏫</div><p>暂无教师数据，点击右上角添加教师</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 班级管理 -->
+    <div class="page" id="page-classes">
+      <div class="card">
+        <div class="toolbar">
+          <input class="search-input" type="text" placeholder="🔍 搜索班级..." oninput="searchClasses(this.value)">
+          <button class="btn btn-primary" onclick="openClassModal()">+ 添加班级</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>班级名称</th><th>年级</th><th>班主任</th><th>学生人数</th><th>创建时间</th><th>操作</th></tr>
+            </thead>
+            <tbody id="class-table-body">
+              <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🏫</div><p>暂无班级数据</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 系统公告 -->
+    <div class="page" id="page-announce">
+      <div class="card">
+        <div class="toolbar">
+          <div class="card-title" style="margin:0">系统公告管理</div>
+          <button class="btn btn-primary" onclick="openAnnounceModal()">+ 发布公告</button>
+        </div>
+        <div id="announce-list" style="margin-top:16px;">
+          <div class="empty-state"><div class="empty-icon">📢</div><p>暂无公告</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 系统设置 -->
+    <div class="page" id="page-settings">
+      <div class="card">
+        <div class="card-title">🔐 修改管理员密码</div>
+        <div style="max-width:400px;">
+          <div class="form-group">
+            <label>当前密码</label>
+            <input type="password" id="old-pwd" placeholder="请输入当前密码">
+          </div>
+          <div class="form-group">
+            <label>新密码</label>
+            <input type="password" id="new-pwd" placeholder="请输入新密码（至少6位）">
+          </div>
+          <div class="form-group">
+            <label>确认新密码</label>
+            <input type="password" id="confirm-pwd" placeholder="请再次输入新密码">
+          </div>
+          <button class="btn btn-primary" onclick="changePwd()">修改密码</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 系统信息</div>
+        <div style="font-size:13px; color:#4a5568; line-height:2.2;">
+          <div>平台名称：<strong>惠教资源平台</strong></div>
+          <div>版本：<strong>v1.0.0</strong></div>
+          <div>技术栈：<strong>HTML + CSS + JavaScript</strong></div>
+          <div>数据存储：<strong>浏览器本地存储（LocalStorage）</strong></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end page-content -->
+</div><!-- end main-content -->
+
+<!-- 添加/编辑教师 模态框 -->
+<div class="modal-overlay" id="teacher-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="teacher-modal-title">添加教师</div>
+      <button class="modal-close" onclick="closeModal('teacher-modal')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>教师姓名 *</label>
+        <input type="text" id="t-name" placeholder="如：张老师">
+      </div>
+      <div class="form-group">
+        <label>登录账号 *</label>
+        <input type="text" id="t-username" placeholder="如：teacher001">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>登录密码 *</label>
+        <input type="password" id="t-password" placeholder="至少6位">
+      </div>
+      <div class="form-group">
+        <label>任课学科</label>
+        <select id="t-subject">
+          <option value="">请选择学科</option>
+          <option>语文</option><option>数学</option><option>英语</option>
+          <option>物理</option><option>化学</option><option>生物</option>
+          <option>历史</option><option>地理</option><option>政治</option>
+          <option>体育</option><option>音乐</option><option>美术</option><option>信息技术</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>联系电话</label>
+        <input type="text" id="t-phone" placeholder="手机号码">
+      </div>
+      <div class="form-group">
+        <label>电子邮箱</label>
+        <input type="text" id="t-email" placeholder="邮箱地址">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>负责班级（用逗号分隔）</label>
+      <input type="text" id="t-classes" placeholder="如：初一(1)班, 初一(2)班">
+    </div>
+    <input type="hidden" id="t-edit-id">
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('teacher-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveTeacher()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加班级 模态框 -->
+<div class="modal-overlay" id="class-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">添加班级</div>
+      <button class="modal-close" onclick="closeModal('class-modal')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>班级名称 *</label>
+        <input type="text" id="c-name" placeholder="如：初一(1)班">
+      </div>
+      <div class="form-group">
+        <label>年级</label>
+        <select id="c-grade">
+          <option>请选择年级</option>
+          <option>一年级</option><option>二年级</option><option>三年级</option>
+          <option>四年级</option><option>五年级</option><option>六年级</option>
+          <option>初一</option><option>初二</option><option>初三</option>
+          <option>高一</option><option>高二</option><option>高三</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>班主任</label>
+        <input type="text" id="c-teacher" placeholder="班主任姓名">
+      </div>
+      <div class="form-group">
+        <label>学生人数</label>
+        <input type="number" id="c-count" placeholder="0">
+      </div>
+    </div>
+    <input type="hidden" id="c-edit-id">
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('class-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveClass()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 发布公告 模态框 -->
+<div class="modal-overlay" id="announce-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">发布系统公告</div>
+      <button class="modal-close" onclick="closeModal('announce-modal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>公告标题 *</label>
+      <input type="text" id="ann-title" placeholder="请输入公告标题">
+    </div>
+    <div class="form-group">
+      <label>公告内容 *</label>
+      <textarea id="ann-content" rows="5" style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;outline:none;" placeholder="请输入公告内容..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>重要程度</label>
+      <select id="ann-level">
+        <option value="normal">普通</option>
+        <option value="important">重要</option>
+        <option value="urgent">紧急</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('announce-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveAnnounce()">发布</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast 通知 -->
+<div class="toast" id="toast"></div>
+
+<script>
+// 权限检查
+const user = JSON.parse(sessionStorage.getItem('edu_current_user') || 'null');
+if (!user || user.role !== 'admin') { window.location.href = 'index.html'; }
+
+// 多开登录检测 - 检测是否在其他标签页登录了不同账号
+(function checkMultiLoginAdmin() {
+  const loginInfo = localStorage.getItem('edu_login_info');
+  if (loginInfo) {
+    const info = JSON.parse(loginInfo);
+    // 如果当前是管理员页面，但登录的是教师账号，或者用户名不匹配
+    if (info.role === 'teacher' || info.username !== user.username) {
+      alert('账号已在其他浏览器标签页登录。同一账号不能同时在多个标签页登录。');
+      sessionStorage.removeItem('edu_current_user');
+      window.location.href = 'index.html';
+      return;
+    }
+  } else {
+    // 如果没有登录信息，说明是从新标签页直接打开，需要重新设置登录标记
+    localStorage.setItem('edu_login_' + user.username, Date.now().toString());
+    localStorage.setItem('edu_login_info', JSON.stringify({ role: 'admin', username: user.username }));
+  }
+  
+  // 监听其他标签页的登录状态变化
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'edu_login_info') {
+      if (!e.newValue) {
+        // 登录信息被清除，说明用户退出登录了
+        alert('您的账号已退出登录。');
+        sessionStorage.removeItem('edu_current_user');
+        window.location.href = 'index.html';
+      } else {
+        const newInfo = JSON.parse(e.newValue);
+        if (newInfo.username !== user.username) {
+          alert('账号 ' + user.username + ' 已在其他浏览器标签页登录。同一账号不能同时在多个标签页登录。');
+          sessionStorage.removeItem('edu_current_user');
+          window.location.href = 'index.html';
+        }
+      }
+    }
+  });
+})();
+
+// 显示用户信息
+document.getElementById('adminName').textContent = user.name || '管理员';
+document.getElementById('adminNameTop').textContent = user.name || '管理员';
+document.getElementById('adminAvatar').textContent = (user.name || '管')[0];
+
+// 时间显示
+function updateTime() {
+  const now = new Date();
+  document.getElementById('currentTime').textContent = now.toLocaleString('zh-CN', { hour12:false });
+}
+updateTime(); setInterval(updateTime, 1000);
+
+// 页面切换
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  const titles = { dashboard:'数据总览', teachers:'教师管理', classes:'班级管理', announce:'系统公告', settings:'系统设置' };
+  document.getElementById('pageTitle').textContent = titles[name] || name;
+  if (name === 'dashboard') refreshDashboard();
+  if (name === 'teachers') renderTeachers();
+  if (name === 'classes') renderClasses();
+  if (name === 'announce') renderAnnounce();
+}
+
+// 退出登录
+function logout() {
+  sessionStorage.removeItem('edu_current_user');
+  window.location.href = 'index.html';
+}
+
+// Toast
+function showToast(msg, duration=2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// 模态框
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ============ 数据总览 ============
+function refreshDashboard() {
+  const teachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
+  const classes = JSON.parse(localStorage.getItem('edu_classes') || '[]');
+  const students = JSON.parse(localStorage.getItem('edu_students') || '[]');
+  const lessons = JSON.parse(localStorage.getItem('edu_lessons') || '[]');
+
+  document.getElementById('stat-teachers').textContent = teachers.length;
+  document.getElementById('stat-classes').textContent = classes.length;
+  document.getElementById('stat-students').textContent = students.length;
+  document.getElementById('stat-lessons').textContent = lessons.length;
+
+  // 最近教师
+  const el = document.getElementById('recent-teachers-list');
+  if (teachers.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👩‍🏫</div><p>暂无教师数据</p></div>';
+  } else {
+    const recent = [...teachers].reverse().slice(0, 5);
+    el.innerHTML = recent.map(t => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f4f8;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#ebf4ff;color:#3182ce;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;">${t.name[0]}</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:500;color:#1a2340;">${t.name}</div>
+          <div style="font-size:12px;color:#718096;">${t.subject || '未设置学科'} · 账号：${t.username}</div>
+        </div>
+        <span class="badge badge-blue">${t.subject || '—'}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ============ 教师管理 ============
+let allTeachers = [];
+
+function renderTeachers(list) {
+  allTeachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
+  const data = list || allTeachers;
+  const tbody = document.getElementById('teacher-table-body');
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👩‍🏫</div><p>暂无教师数据，点击右上角添加教师</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(t => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#ebf4ff;color:#3182ce;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;">${t.name[0]}</div>
+          <div><div style="font-weight:500;color:#1a2340;">${t.name}</div></div>
+        </div>
+      </td>
+      <td><code style="background:#f7fafc;padding:2px 8px;border-radius:4px;font-size:12px;">${t.username}</code></td>
+      <td>${t.subject ? `<span class="badge badge-blue">${t.subject}</span>` : '—'}</td>
+      <td style="font-size:12px;color:#718096;">${(t.classes || []).join('、') || '—'}</td>
+      <td style="font-size:12px;color:#718096;">${t.phone || '—'}</td>
+      <td style="font-size:12px;color:#718096;">${t.createdAt || '—'}</td>
+      <td>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-outline btn-sm" onclick="editTeacher('${t.id}')">编辑</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTeacher('${t.id}')">删除</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function searchTeachers(q) {
+  const list = allTeachers.filter(t =>
+    t.name.includes(q) || t.username.includes(q) || (t.subject||'').includes(q)
+  );
+  renderTeachers(list);
+}
+
+function openTeacherModal(id) {
+  document.getElementById('t-name').value = '';
+  document.getElementById('t-username').value = '';
+  document.getElementById('t-password').value = '';
+  document.getElementById('t-subject').value = '';
+  document.getElementById('t-phone').value = '';
+  document.getElementById('t-email').value = '';
+  document.getElementById('t-classes').value = '';
+  document.getElementById('t-edit-id').value = '';
+  document.getElementById('teacher-modal-title').textContent = '添加教师';
+  openModal('teacher-modal');
+}
+
+function editTeacher(id) {
+  const teachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
+  const t = teachers.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('t-name').value = t.name;
+  document.getElementById('t-username').value = t.username;
+  document.getElementById('t-password').value = t.password;
+  document.getElementById('t-subject').value = t.subject || '';
+  document.getElementById('t-phone').value = t.phone || '';
+  document.getElementById('t-email').value = t.email || '';
+  document.getElementById('t-classes').value = (t.classes || []).join(', ');
+  document.getElementById('t-edit-id').value = id;
+  document.getElementById('teacher-modal-title').textContent = '编辑教师';
+  openModal('teacher-modal');
+}
+
+function saveTeacher() {
+  const name = document.getElementById('t-name').value.trim();
+  const username = document.getElementById('t-username').value.trim();
+  const password = document.getElementById('t-password').value;
+  const subject = document.getElementById('t-subject').value;
+  const phone = document.getElementById('t-phone').value.trim();
+  const email = document.getElementById('t-email').value.trim();
+  const classesStr = document.getElementById('t-classes').value.trim();
+  const editId = document.getElementById('t-edit-id').value;
+
+  if (!name || !username || !password) { showToast('❌ 请填写姓名、账号和密码'); return; }
+  if (password.length < 6) { showToast('❌ 密码至少6位'); return; }
+
+  let teachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
+
+  // 检查账号重复
+  const dupCheck = teachers.find(t => t.username === username && t.id !== editId);
+  if (dupCheck) { showToast('❌ 账号已存在，请换一个'); return; }
+
+  const classes = classesStr ? classesStr.split(/[,，]+/).map(s => s.trim()).filter(Boolean) : [];
+
+  if (editId) {
+    const idx = teachers.findIndex(t => t.id === editId);
+    if (idx >= 0) teachers[idx] = { ...teachers[idx], name, username, password, subject, phone, email, classes };
+    showToast('✅ 教师信息已更新');
+  } else {
+    teachers.push({ id:'t'+Date.now(), name, username, password, subject, phone, email, classes, createdAt: new Date().toLocaleDateString('zh-CN') });
+    showToast('✅ 教师添加成功');
+  }
+  localStorage.setItem('edu_teachers', JSON.stringify(teachers));
+  closeModal('teacher-modal');
+  renderTeachers();
+  refreshDashboard();
+}
+
+function deleteTeacher(id) {
+  if (!confirm('确定要删除该教师账号吗？此操作不可恢复！')) return;
+  let teachers = JSON.parse(localStorage.getItem('edu_teachers') || '[]');
+  teachers = teachers.filter(t => t.id !== id);
+  localStorage.setItem('edu_teachers', JSON.stringify(teachers));
+  renderTeachers();
+  refreshDashboard();
+  showToast('✅ 已删除教师账号');
+}
+
+// ============ 班级管理 ============
+function renderClasses(list) {
+  const classes = list || JSON.parse(localStorage.getItem('edu_classes') || '[]');
+  const tbody = document.getElementById('class-table-body');
+  if (classes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🏫</div><p>暂无班级数据</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = classes.map(c => `
+    <tr>
+      <td><span style="font-weight:500;color:#1a2340;">${c.name}</span></td>
+      <td><span class="badge badge-green">${c.grade || '—'}</span></td>
+      <td>${c.teacher || '—'}</td>
+      <td>${c.count || 0} 人</td>
+      <td style="font-size:12px;color:#718096;">${c.createdAt || '—'}</td>
+      <td>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-outline btn-sm" onclick="editClass('${c.id}')">编辑</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteClass('${c.id}')">删除</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function searchClasses(q) {
+  const all = JSON.parse(localStorage.getItem('edu_classes') || '[]');
+  renderClasses(all.filter(c => c.name.includes(q) || (c.grade||'').includes(q)));
+}
+
+function openClassModal() {
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-grade').value = '';
+  document.getElementById('c-teacher').value = '';
+  document.getElementById('c-count').value = '';
+  document.getElementById('c-edit-id').value = '';
+  openModal('class-modal');
+}
+
+function editClass(id) {
+  const classes = JSON.parse(localStorage.getItem('edu_classes') || '[]');
+  const c = classes.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('c-name').value = c.name;
+  document.getElementById('c-grade').value = c.grade || '';
+  document.getElementById('c-teacher').value = c.teacher || '';
+  document.getElementById('c-count').value = c.count || '';
+  document.getElementById('c-edit-id').value = id;
+  openModal('class-modal');
+}
+
+function saveClass() {
+  const name = document.getElementById('c-name').value.trim();
+  const grade = document.getElementById('c-grade').value;
+  const teacher = document.getElementById('c-teacher').value.trim();
+  const count = parseInt(document.getElementById('c-count').value) || 0;
+  const editId = document.getElementById('c-edit-id').value;
+  if (!name) { showToast('❌ 请填写班级名称'); return; }
+  let classes = JSON.parse(localStorage.getItem('edu_classes') || '[]');
+  if (editId) {
+    const idx = classes.findIndex(c => c.id === editId);
+    if (idx >= 0) classes[idx] = { ...classes[idx], name, grade, teacher, count };
+    showToast('✅ 班级信息已更新');
+  } else {
+    classes.push({ id:'c'+Date.now(), name, grade, teacher, count, createdAt: new Date().toLocaleDateString('zh-CN') });
+    showToast('✅ 班级添加成功');
+  }
+  localStorage.setItem('edu_classes', JSON.stringify(classes));
+  closeModal('class-modal');
+  renderClasses();
+  refreshDashboard();
+}
+
+function deleteClass(id) {
+  if (!confirm('确定要删除该班级吗？')) return;
+  let classes = JSON.parse(localStorage.getItem('edu_classes') || '[]');
+  classes = classes.filter(c => c.id !== id);
+  localStorage.setItem('edu_classes', JSON.stringify(classes));
+  renderClasses();
+  refreshDashboard();
+  showToast('✅ 已删除班级');
+}
+
+// ============ 公告 ============
+function renderAnnounce() {
+  const list = JSON.parse(localStorage.getItem('edu_announcements') || '[]');
+  const el = document.getElementById('announce-list');
+  if (list.length === 0) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">📢</div><p>暂无公告</p></div>'; return; }
+  const levelMap = { normal:'badge-gray', important:'badge-blue', urgent:'badge-blue' };
+  const levelText = { normal:'普通', important:'重要', urgent:'紧急' };
+  el.innerHTML = list.map((a,i) => `
+    <div style="padding:16px;border:1px solid #edf2f7;border-radius:10px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-weight:600;font-size:14px;color:#1a2340;">${a.title}</span>
+        <span class="badge ${levelMap[a.level]}">${levelText[a.level]}</span>
+        <span style="margin-left:auto;font-size:12px;color:#a0aec0;">${a.createdAt}</span>
+        <button class="btn btn-danger btn-sm" onclick="deleteAnnounce(${i})">删除</button>
+      </div>
+      <p style="font-size:13px;color:#4a5568;line-height:1.7;">${a.content}</p>
+    </div>
+  `).join('');
+}
+
+function openAnnounceModal() {
+  document.getElementById('ann-title').value = '';
+  document.getElementById('ann-content').value = '';
+  document.getElementById('ann-level').value = 'normal';
+  openModal('announce-modal');
+}
+
+function saveAnnounce() {
+  const title = document.getElementById('ann-title').value.trim();
+  const content = document.getElementById('ann-content').value.trim();
+  const level = document.getElementById('ann-level').value;
+  if (!title || !content) { showToast('❌ 请填写标题和内容'); return; }
+  const list = JSON.parse(localStorage.getItem('edu_announcements') || '[]');
+  list.unshift({ title, content, level, createdAt: new Date().toLocaleString('zh-CN') });
+  localStorage.setItem('edu_announcements', JSON.stringify(list));
+  closeModal('announce-modal');
+  renderAnnounce();
+  showToast('✅ 公告已发布');
+}
+
+function deleteAnnounce(idx) {
+  if (!confirm('确定删除该公告吗？')) return;
+  const list = JSON.parse(localStorage.getItem('edu_announcements') || '[]');
+  list.splice(idx, 1);
+  localStorage.setItem('edu_announcements', JSON.stringify(list));
+  renderAnnounce();
+  showToast('✅ 公告已删除');
+}
+
+// ============ 修改密码 ============
+function changePwd() {
+  const old = document.getElementById('old-pwd').value;
+  const nw = document.getElementById('new-pwd').value;
+  const cf = document.getElementById('confirm-pwd').value;
+  const admin = JSON.parse(localStorage.getItem('edu_admin') || '{}');
+  if (old !== admin.password) { showToast('❌ 当前密码错误'); return; }
+  if (nw.length < 6) { showToast('❌ 新密码至少6位'); return; }
+  if (nw !== cf) { showToast('❌ 两次密码不一致'); return; }
+  admin.password = nw;
+  localStorage.setItem('edu_admin', JSON.stringify(admin));
+  showToast('✅ 密码修改成功，下次登录请使用新密码');
+  document.getElementById('old-pwd').value = '';
+  document.getElementById('new-pwd').value = '';
+  document.getElementById('confirm-pwd').value = '';
+}
+
+// 初始化
+refreshDashboard();
+</script>
+</body>
+</html>

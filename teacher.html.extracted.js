@@ -1,0 +1,1967 @@
+
+// ===== 权限检查 =====
+const lessonTemplates = {
+  '新授课': {
+    content: '一、教学目标\n1.知识与技能：\n2.过程与方法：\n3.情感态度与价值观：\n\n二、教学重难点\n重点：\n难点：\n\n三、教学过程\n（一）导入（5分钟）\n（二）新授（25分钟）\n（三）练习（10分钟）\n（四）小结（5分钟）\n\n四、作业布置',
+    method: '讲授法、讨论法、案例分析法',
+    keypoints: '1. \n2. \n3. ',
+    difficulties: '1. 抽象概念的理解\n2. 知识之间的联系\n3. 实际应用场景',
+    solution: '1. 使用类比和生活实例\n2. 可视化辅助\n3. 分组讨论',
+    activities: '导入：5分钟 - 创设情境\n新授：25分钟\n练习：10分钟\n小结：5分钟',
+    homeworkBasic: '面向全体学生：课本P23 练习1-5',
+    homeworkAdvanced: '面向中等以上学生：拓展练习1-3',
+    homeworkExtension: '挑战：预习下一节内容',
+    predict: '学生可能在抽象概念理解上有困难',
+    reflection: ''
+  },
+  '复习课': {
+    content: '一、复习目标\n1.梳理知识体系\n2.查漏补缺\n3.巩固重点\n\n二、知识框架\n三、典型例题\n四、易错分析\n\n五、课堂练习\n六、作业布置',
+    method: '讲解法、练习法',
+    keypoints: '本章核心考点：',
+    difficulties: '学生易错点：1. 概念混淆 2. 公式误用',
+    solution: '1. 对比表格 2. 错题分析',
+    activities: '知识梳理：15分钟\n例题讲解：15分钟\n练习：10分钟',
+    homeworkBasic: '复习题单全部',
+    homeworkAdvanced: '能力提升选做',
+    homeworkExtension: '综合运用题2道',
+    predict: '学生对综合题感到困难',
+    reflection: ''
+  },
+  '口语交际课': {
+    content: '一、交际话题引入\n二、词汇句型准备\n三、情景对话练习\n四、小组展示\n\n五、评价反馈\n六、课后拓展',
+    method: '情境教学法、角色扮演法',
+    keypoints: '核心交际用语：',
+    difficulties: '学生不敢开口、发音不准确',
+    solution: '1. 降低焦虑 2. 同伴互助 3. 鼓励为主',
+    activities: '热身：5分钟\n句型练习：15分钟\n情景对话：20分钟\n展示：10分钟',
+    homeworkBasic: '朗读课文并录音',
+    homeworkAdvanced: '用本课句型编写对话',
+    homeworkExtension: '寻找生活中使用该句型的场景',
+    predict: '部分学生可能因羞涩不敢开口',
+    reflection: ''
+  },
+  '实验探究课': {
+    content: '一、提出问题\n二、作出假设\n三、设计实验\n四、动手操作\n\n五、记录数据\n六、得出结论\n七、表达交流',
+    method: '探究法、实验法、合作学习法',
+    keypoints: '实验核心要点：',
+    difficulties: '实验操作步骤易出错',
+    solution: '1. 演示实验 2. 分步指导 3. 同伴互助',
+    activities: '问题导入：5分钟\n实验设计：10分钟\n动手操作：25分钟\n总结：10分钟',
+    homeworkBasic: '完成实验报告',
+    homeworkAdvanced: '分析实验误差来源',
+    homeworkExtension: '设计改进实验方案',
+    predict: '学生可能操作不规范，需强调安全',
+    reflection: ''
+  }
+};const user = JSON.parse(sessionStorage.getItem('edu_current_user') || 'null');
+if (!user || user.role !== 'teacher') { window.location.href = 'index.html'; }
+
+// ===== 多开登录检测 =====
+(function checkMultiLoginTeacher() {
+  const loginInfo = localStorage.getItem('edu_login_info');
+  if (loginInfo) {
+    const info = JSON.parse(loginInfo);
+    // 如果当前是教师页面，但登录的是管理员账号，或者用户名不匹配
+    if (info.role === 'admin' || info.username !== user.username) {
+      alert('账号已在其他浏览器标签页登录。同一账号不能同时在多个标签页登录。');
+      sessionStorage.removeItem('edu_current_user');
+      window.location.href = 'index.html';
+      return;
+    }
+  } else {
+    // 如果没有登录信息，说明是从新标签页直接打开，需要重新设置登录标记
+    localStorage.setItem('edu_login_' + user.username, Date.now().toString());
+    localStorage.setItem('edu_login_info', JSON.stringify({ role: 'teacher', username: user.username }));
+  }
+  
+  // 监听其他标签页的登录状态变化
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'edu_login_info') {
+      if (!e.newValue) {
+        // 登录信息被清除，说明用户退出登录了
+        alert('您的账号已退出登录。');
+        sessionStorage.removeItem('edu_current_user');
+        window.location.href = 'index.html';
+      } else {
+        const newInfo = JSON.parse(e.newValue);
+        if (newInfo.username !== user.username) {
+          alert('账号 ' + user.username + ' 已在其他浏览器标签页登录。同一账号不能同时在多个标签页登录。');
+          sessionStorage.removeItem('edu_current_user');
+          window.location.href = 'index.html';
+        }
+      }
+    }
+  });
+})();
+
+// ===== 初始化用户信息 =====
+document.getElementById('teacherAvatar').textCocontent = (user.name||'师')[0];
+document.getElementById('teacherName').textCocontent = user.name || '教师';
+document.getElementById('teacherNameTop').textCocontent = user.name || '老师';
+document.getElementById('teacherSubject').textCocontent = (user.subject || '') + ' 教师';
+
+// ===== 保存密码提示 =====
+const savedPwdKey = 'edu_saved_' + user.username;
+const pwdPromptKey = 'edu_pwd_prompted_' + user.username;
+if (!localStorage.getItem(savedPwdKey) && !sessionStorage.getItem(pwdPromptKey)) {
+  sessionStorage.setItem(pwdPromptKey, '1');
+  setTimeout(() => { const el = document.getElementById('savePwdBanner'); if(el) el.style.display = 'flex'; }, 600);
+}
+function savePwd(yes) {
+  const el = document.getElementById('savePwdBanner'); if(el) el.style.display = 'none';
+  if (yes) {
+    localStorage.setItem(savedPwdKey, JSON.stringify({ username: user.username, password: user.password, role: 'teacher' }));
+    showToast('✅ 已保存登录信息，下次可直接登录');
+  }
+}
+
+// ===== 互联网资源搜索 =====
+let currentSearchType = 'text';
+let currentSources = []; // 存储当前搜索结果
+
+function setSearchType(type) {
+  currentSearchType = type;
+  const btnText = document.getElementById('btn-text');
+  const btnVideo = document.getElementById('btn-video');
+  const btnExam = document.getElementById('btn-exam');
+  // 移除所有active
+  [btnText, btnVideo, btnExam].forEach(btn => btn && btn.classList.remove('active'));
+  // 添加当前active
+  if (type === 'text') btnText.classList.add('active');
+  else if (type === 'video') btnVideo.classList.add('active');
+  else if (type === 'exam') btnExam.classList.add('active');
+  const q = document.getElementById('net-search-input').value.trim();
+  if (q) netSearch();
+}
+
+function loadInEmbed(url, title, sites) {
+  const modal = document.getElementById('embed-modal');
+  const titleEl = document.getElementById('embed-modal-title');
+  const contentEl = document.getElementById('embed-modal-content');
+  if (!modal || !contentEl) return;
+
+  if (sites && sites.length > 0) {
+    // 多个网站，显示选择界面（改为嵌入预览，不跳转）
+    if (titleEl) titleEl.textCocontent = '🌐 ' + title + ' - 选择平台直接预览';
+    contentEl.innerHTML = `
+      <div style="margin-bottom:14px;">
+        <p style="font-size:14px;color:#4a5568;line-height:1.6;">
+          点击任意平台卡片，将在下方直接预览「<strong style="color:#16a34a;">${title}</strong>」的相关内容：
+        </p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+        ${sites.map(site => `
+          <div style="border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;transition:all 0.2s;cursor:pointer;background:#fff;"
+            onmouseover="this.style.borderColor='#16a34a';this.style.boxShadow='0 4px 12px rgba(22,163,74,0.15)';"
+            onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='none';"
+            onclick="embedPreviewSite('${site.url.replace(/'/g, "\\'")}', '${site.name.replace(/'/g, "\\'")}')">
+              <div style="padding:14px;text-align:center;">
+                <div style="font-size:26px;margin-bottom:6px;">${site.icon}</div>
+                <div style="font-size:13px;font-weight:600;color:#1a3a2a;margin-bottom:4px;">${site.name}</div>
+                <div style="font-size:11px;color:#718096;margin-bottom:8px;">${site.desc}</div>
+                <div style="padding:5px 10px;background:#f0fff4;color:#16a34a;border-radius:6px;font-size:11px;font-weight:600;display:inline-block;">
+                  📋 点击预览
+                </div>
+              </div>
+          </div>
+        `).join('')}
+      </div>
+      <div id="embed-preview-area">
+        <div style="text-align:center;padding:40px 20px;color:#a0aec0;font-size:13px;">👆 请选择一个平台预览内容</div>
+      </div>
+    `;
+    openModal('embed-modal');
+  } else if (url) {
+    // 单个网站，直接嵌入预览
+    embedPreviewSite(url, title);
+  }
+}
+
+// 在嵌入模态框中预览网站
+function embedPreviewSite(url, siteName) {
+  const contentEl = document.getElementById('embed-modal-content');
+  const previewArea = document.getElementById('embed-preview-area');
+  if (previewArea) {
+    previewArea.innerHTML = `
+      <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:13px;color:#4a5568;font-weight:600;">📺 正在预览：${siteName}</span>
+        <button class="btn btn-sm btn-outline" onclick="window.open('${url.replace(/'/g, "\\'")}', '_blank')">🔗 在新标签页打开</button>
+      </div>
+      <div style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;height:60vh;background:#fff;">
+        <iframe src="${url}" style="width:100%;height:100%;border:none;"></iframe>
+      </div>
+      <div style="margin-top:8px;padding:8px 12px;background:#f7fafc;border-radius:6px;font-size:12px;color:#718096;">
+        💡 提示：部分网站可能不支持嵌入显示，可点击"在新标签页打开"按钮访问原网站
+      </div>
+    `;
+  }
+  const titleEl = document.getElementById('embed-modal-title');
+  if (titleEl) titleEl.textCocontent = '🌐 预览：' + siteName;
+}
+
+function netSearch() {
+  const query = document.getElementById('net-search-input').value.trim();
+  if (!query) { showToast('❌ 请输入要搜索的知识点'); return; }
+  const resultsEl = document.getElementById('exam-results');
+  resultsEl.innerHTML = `<div style="text-align:center;padding:30px 20px;color:#a0aec0;"><div style="font-size:36px;margin-bottom:12px;animation:pulse 1.5s infinite;">🔄</div><p style="font-size:14px;color:#718096;">正在搜索「${query}」的相关资源...</p></div><style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>`;
+  setTimeout(() => {
+    if (currentSearchType === 'text') renderTextResults(query);
+    else if (currentSearchType === 'video') renderVideoResults(query);
+    else if (currentSearchType === 'exam') renderExamResults(query);
+  }, 600);
+}
+
+function renderTextResults(query) {
+  const resultsEl = document.getElementById('exam-results');
+  const sources = [
+    { name:'百度百科', icon:'📚', color:'#2932e1', desc:'知识点详解、定义、定理、公式', url:`https://baike.baidu.m/item/${encodeURIComponent(query)}` },
+    { name:'百度文库', icon:'📄', color:'#4a7dff', desc:'教材、教案、课件、习题文档', url:`https://wenku.baidu.m/search?word=${encodeURIComponent(query)}&lm=1` },
+    { name:'知乎', icon:'💬', color:'#00b42a', desc:'名师解读、学习方法、经验分享', url:`https://www.zhihu.m/search?type=content&q=${encodeURIComponent(query)}` },
+    { name:'学科网', icon:'🏫', color:'#e53e3e', desc:'中小学教案、试题、课件资源库', url:`https://www.zxxk.m/search/?KeyWord=${encodeURIComponent(query)}` },
+    { name:'惠教资源平台', icon:'🌐', color:'#059669', desc:'优质教学资源、课件、教案下载', url:`https://www.huijiaoyu.m/search?q=${encodeURIComponent(query)}` },
+    { name:'B站专栏', icon:'📝', color:'#ff6b9d', desc:'学习UP主图文教程、笔记分享', url:`https://search.bilibili.m/article?keyword=${encodeURIComponent(query)}` },
+    { name:'我要查词典', icon:'🔤', color:'#6366f1', desc:'字词典释义、近反义词、例句', url:`https://www.5156edu.m/searchindex/?searchWord=${encodeURIComponent(query)}` },
+    { name:'国家智慧教育', icon:'🌍', color:'#2563eb', desc:'教育部官方中小学课程资源', url:`https://www.smartedu.cn/search?query=${encodeURIComponent(query)}` },
+    { name:'可汗学院(中文)', icon:'🌏', color:'#14b8a6', desc:'国际精品课程、练习题库', url:`https://zh.khanacademy.org/search?search_again=1&page=1&q=${encodeURIComponent(query)}` },
+    { name:'学习强国', icon:'⭐', color:'#dc2626', desc:'权威学习资源、名师课堂', url:`https://www.xuexi.cn/search.html?searchText=${encodeURIComponent(query)}` }
+  ];
+  // 保存到全局变量
+  currentSources = sources;
+    resultsEl.innerHTML = `
+      <div style="margin-bottom:14px;">
+        <span style="font-size:14px;font-weight:600;color:#1a3a2a;">📖 「${query}」相关文字讲解</span>
+        <span style="font-size:12px;color:#718096;margin-left:8px;">共 ${sources.length} 个来源 · 点击卡片直接预览</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+        ${sources.map(s => `
+          <div style="border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;cursor:pointer;background:#fff;transition:all 0.2s;"
+            onmouseover="this.style.borderColor='#16a34a';this.style.boxShadow='0 4px 16px rgba(22,163,74,0.1)';"
+            onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='none';"
+            onclick="loadInEmbed('${s.url.replace(/'/g, "\\'")}', '${s.name.replace(/'/g, "\\'")}', null)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:18px;">${s.in}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;color:#1a3a2a;white-space:nowrap;overflow:hidden;text-overflow:ecolipsis;">${s.name}</div>
+                <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${s.color}15;color:${s.color};font-weight:600;">📖 文字</span>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#718096;line-height:1.5;">${s.desc}</div>
+            <div style="margin-top:8px;font-size:11px;color:#16a34a;">📋 点击直接预览</div>
+          </div>
+        `).join('')}
+      </div>`;
+}
+
+function renderVideoResults(query) {
+  const resultsEl = document.getElementById('exam-results');
+  const videoSources = [
+    { name:'B站（哔哩哔哩）', icon:'📺', color:'#ff6b9d', desc:'海量免费教学视频，名师、UP主精品课程', url:`https://search.bilibili.m/acol?keyword=${encodeURIComponent(query+' 教学')}` },
+    { name:'中国大学MOOC', icon:'🎓', color:'#2563eb', desc:'985/211高校精品课程，名师授课', url:`https://www.iurse163.org/search.htm?search=${encodeURIComponent(query)}` },
+    { name:'智慧职教', icon:'🏗️', color:'#16a34a', desc:'职业教育视频课程，实操技能教学', url:`https://www.icve.m.cn/search/?keywords=${encodeURIComponent(query)}` },
+    { name:'学堂在线', icon:'📡', color:'#7c3aed', desc:'清华、北大等顶尖大学在线课程', url:`https://www.xuetangx.m/search?query=${encodeURIComponent(query)}&type=urse` },
+    { name:'网易公开课', icon:'🌐', color:'#ea580c', desc:'TED演讲、国内外名校公开课', url:`https://open.163.m/search.htm?keyword=${encodeURIComponent(query)}` },
+    { name:'国家智慧教育-中小学', icon:'🏫', color:'#dc2626', desc:'教育部官方中小学同步课程视频', url:`https://www.smartedu.cn/search?query=${encodeURIComponent(query)}` },
+    { name:'腾讯课堂', icon:'💬', color:'#00b42a', desc:'职业技能、升学备考各类视频课程', url:`https://ke.qq.m/cgi-bin/searchclass?urseName=${encodeURIComponent(query)}&type=2` },
+    { name:'爱课程', icon:'📚', color:'#8b5cf6', desc:'国家级精品课程资源共享平台', url:`https://www.iurses.cn/search.html?searchKeyWord=${encodeURIComponent(query)}` },
+    { name:'可汗学院', icon:'🌏', color:'#14b8a6', desc:'全球知名免费教学视频，精讲精练', url:`https://zh.khanacademy.org/search?search_again=1&page=1&q=${encodeURIComponent(query)}` },
+    { name:'YouTube', icon:'▶️', color:'#dc2626', desc:'全球最大视频库，海外教学资源', url:`https://www.youtube.m/results?search_query=${encodeURIComponent(query+' tutorial')}` }
+  ];
+  // 保存到全局变量
+  currentSources = videoSources;
+    resultsEl.innerHTML = `
+      <div style="margin-bottom:14px;">
+        <span style="font-size:14px;font-weight:600;color:#1a3a2a;">🎬 「${query}」相关视频教程</span>
+        <span style="font-size:12px;color:#718096;margin-left:8px;">共 ${videoSources.length} 个视频平台 · 点击卡片直接预览</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+        ${videoSources.map(v => `
+          <div style="border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;transition:all 0.2s;cursor:pointer;background:#fff;"
+            onmouseover="this.style.borderColor='#ea580c';this.style.boxShadow='0 4px 16px rgba(234,88,12,0.12)';"
+            onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='none';"
+            onclick="loadInEmbed('${v.url.replace(/'/g, "\\'")}', '${v.name.replace(/'/g, "\\'")}', null)">
+            <div style="padding:16px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div style="width:38px;height:38px;border-radius:10px;background:${v.color}15;display:flex;align-items:center;justify-content:center;font-size:18px;">${v.icon}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:700;color:#1a3a2a;">${v.name}</div>
+                  <div style="font-size:11px;color:${v.color};font-weight:600;margin-top:1px;">🎬 视频平台</div>
+                </div>
+              </div>
+              <div style="font-size:12px;color:#718096;line-height:1.5;margin-bottom:12px;">${v.desc}</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;background:${v.color}15;border-radius:8px;font-size:13px;font-weight:600;color:${v.color};">
+                <span>📺</span><span>点击预览视频</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+}
+
+function renderExamResults(query) {
+  const resultsEl = document.getElementById('exam-results');
+  const examSources = [
+    { name:'学科网', icon:'🏫', color:'#e53e3e', desc:'中小学各科试卷、试题、答案下载', url:`https://www.zxxk.m/search/?KeyWord=${encodeURIComponent(query+' 试卷')}` },
+    { name:'组卷网', icon:'📋', color:'#2563eb', desc:'智能组卷、历年真题、模拟试卷', url:`https://www.zujuan.m/question/search?searchWord=${encodeURIComponent(query)}` },
+    { name:'七天网络', icon:'🌐', color:'#16a34a', desc:'各省市期中期末试卷、答案解析', url:`https://www.7net.cc/search?keyword=${encodeURIComponent(query)}` },
+    { name:'高考资源网', icon:'🎓', color:'#dc2626', desc:'高考真题、各科试卷、复习资料', url:`https://www.51test.net/search/?keyword=${encodeURIComponent(query)}` },
+    { name:'21世纪教育网', icon:'📚', color:'#7c3aed', desc:'中小学试卷、课件、教案打包下载', url:`https://www.21cnjy.m/search.php?mod=middle&kw=${encodeURIComponent(query)}` },
+    { name:'教习网', icon:'✏️', color:'#ea580c', desc:'各学科试卷、练习题、答案下载', url:`https://www.jiaox365.m/search/?kw=${encodeURIComponent(query)}` },
+    { name:'百度文库', icon:'📄', color:'#4a7dff', desc:'试卷文档、试题分析、学习资料', url:`https://wenku.baidu.m/search?word=${encodeURIComponent(query+' 试卷')}&lm=1` },
+    { name:'惠教资源平台', icon:'🌐', color:'#059669', desc:'精品试卷、模拟题、真题下载', url:`https://www.huijiaoyu.m/search?q=${encodeURIComponent(query+' 试卷')}` }
+  ];
+  // 保存到全局变量
+  currentSources = examSources;
+    resultsEl.innerHTML = `
+      <div style="margin-bottom:14px;">
+        <span style="font-size:14px;font-weight:600;color:#1a3a2a;">📝 「${query}」相关试卷下载</span>
+        <span style="font-size:12px;color:#718096;margin-left:8px;">共 ${examSources.length} 个试卷平台 · 点击卡片直接预览</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+        ${examSources.map(v => `
+          <div style="border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;transition:all 0.2s;cursor:pointer;background:#fff;"
+            onmouseover="this.style.borderColor='#16a34a';this.style.boxShadow='0 4px 16px rgba(22,163,74,0.12)';"
+            onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='none';"
+            onclick="loadInEmbed('${v.url.replace(/'/g, "\\'")}', '${v.name.replace(/'/g, "\\'")}', null)">
+            <div style="padding:16px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div style="width:38px;height:38px;border-radius:10px;background:${v.color}15;display:flex;align-items:center;justify-content:center;font-size:18px;">${v.icon}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:700;color:#1a3a2a;">${v.name}</div>
+                  <div style="font-size:11px;color:${v.color};font-weight:600;margin-top:1px;">📝 试卷平台</div>
+                </div>
+              </div>
+              <div style="font-size:12px;color:#718096;line-height:1.5;margin-bottom:12px;">${v.desc}</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;background:${v.color}15;border-radius:8px;font-size:13px;font-weight:600;color:${v.color};">
+                <span>📺</span><span>点击预览</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+}
+
+// ===== 今日教学安排（带持续响铃提醒）=====
+let scheduleTimer = null;
+let reminderAudioCtx = null;
+let reminderOscicolators = [];
+let reminderInterval = null;
+let activeReminderItem = null;
+
+function loadSchedule() {
+  const key = 'edu_schedule_' + user.id;
+  return JSON.parse(localStorage.getItem(key) || '[]');
+}
+
+function saveScheduleData(data) {
+  const key = 'edu_schedule_' + user.id;
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function openScheduleModal() {
+  document.getElementById('sch-time').value = '';
+  document.getElementById('sch-remind-time').value = '';
+  document.getElementById('sch-content').value = '';
+  document.getElementById('schedule-modal-title').textCocontent = '添加教学安排';
+  openModal('schedule-modal');
+}
+
+function saveSchedule() {
+  const time = document.getElementById('sch-time').value.trim();
+  const remindTime = document.getElementById('sch-remind-time').value;
+  const content = document.getElementById('sch-content').value.trim();
+  if (!time || !content) { showToast('❌ 请填写时间和事项内容'); return; }
+  const data = loadSchedule();
+  data.push({ id:'s'+Date.now(), time, remindTime, content, done:false, notified:false });
+  saveScheduleData(data);
+  closeModal('schedule-modal');
+  renderSchedule();
+  startReminderTimer();
+  showToast('✅ 安排已保存，到点会持续响铃提醒您');
+}
+
+function renderSchedule() {
+  const data = loadSchedule();
+  const el = document.getElementById('today-schedule');
+  if (data.length === 0) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#a0aec0;font-size:13px;">暂无安排，点击"+ 添加"设置</div>';
+  } else {
+    el.innerHTML = data.map((s,i) => `
+      <div class="schedule-item" id="sch-item-${s.id}">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" ${s.done?'checked':''} onchange="toggleScheduleDone('${s.id}',this.checked)" style="accent-color:#16a34a;width:16px;height:16px;">
+          <span class="s-time">${s.time}</span>
+        </div>
+        <div class="s-content" style="${s.done?'text-deration:line-through;color:#a0aec0;':''}">${s.content}</div>
+        ${s.remindTime?`<span style="font-size:11px;color:#ea580c;background:#fff7ed;padding:2px 8px;border-radius:6px;">🔔 ${s.remindTime}</span>`:''}
+        <span class="s-del" onclick="deleteSchedule('${s.id}')" title="删除">✕</span>
+      </div>
+    `).join('');
+  }
+  renderFucolTimetable();
+  startReminderTimer();
+}
+
+function toggleScheduleDone(id, done) {
+  const data = loadSchedule();
+  const item = data.find(s => s.id === id);
+  if (item) { item.done = done; saveScheduleData(data); renderSchedule(); }
+}
+
+function deleteSchedule(id) {
+  if (!confirm('确定删除该安排？')) return;
+  saveScheduleData(loadSchedule().filter(s => s.id !== id));
+  renderSchedule();
+  showToast('✅ 已删除');
+}
+
+function renderFucolTimetable() {
+  const data = loadSchedule();
+  const el = document.getElementById('my-timetable');
+  if (data.length === 0) {
+    el.innerHTML = '<div style="padding:12px 0;color:#a0aec0;">暂无课表数据，请添加教学安排</div>';
+  } else {
+    el.innerHTML = data.map(s => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f4f8;">
+        <span style="font-size:13px;font-weight:600;color:#16a34a;min-width:70px;">${s.time}</span>
+        <span style="flex:1;font-size:13px;color:#1a3a2a;">${s.content}</span>
+        ${s.remindTime?`<span style="font-size:11px;color:#ea580c;">🔔 ${s.remindTime}</span>`:''}
+      </div>
+    `).join('');
+  }
+}
+
+// 停止持续响铃
+function stopReminderSound() {
+  if (reminderInterval) {
+    clearInterval(reminderInterval);
+    reminderInterval = null;
+  }
+  if (reminderAudioCtx) {
+    try { reminderAudioCtx.close(); } catch(e) {}
+    reminderAudioCtx = null;
+  }
+  reminderOscicolators = [];
+}
+
+// 持续响铃函数
+function startContinuousBeep() {
+  if (reminderInterval) stopReminderSound();
+  
+  try {
+    reminderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // 循环播放提示音
+    reminderInterval = setInterval(() => {
+      if (!reminderAudioCtx) return;
+      const pattern = [520, 660, 780, 660];
+      pattern.forEach((freq, i) => {
+        setTimeout(() => {
+          if (!reminderAudioCtx) return;
+          try {
+            const osc = reminderAudioCtx.createOscicolator();
+            const gain = reminderAudioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(reminderAudioCtx.destination);
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, reminderAudioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, reminderAudioCtx.currentTime + 0.4);
+            osc.start(reminderAudioCtx.currentTime);
+            osc.stop(reminderAudioCtx.currentTime + 0.4);
+            reminderOscicolators.push(osc);
+          } catch(e) {}
+        }, i * 250);
+      });
+    }, 1500); // 每1.5秒重复一次
+  } catch(e) {
+    console.log('Audio not supported');
+  }
+}
+
+// 关闭提醒弹窗
+function dismissReminder() {
+  stopReminderSound();
+  const overlay = document.getElementById('reminder-alert-overlay');
+  if (overlay) overlay.classList.remove('show');
+  showToast('✅ 提醒已关闭');
+}
+
+// 触发提醒
+function triggerReminder(scheduleItem) {
+  activeReminderItem = scheduleItem;
+  
+  // 显示弹窗
+  const overlay = document.getElementById('reminder-alert-overlay');
+  const contentEl = document.getElementById('reminder-alert-content');
+  const timeEl = document.getElementById('reminder-alert-time');
+  
+  if (overlay) {
+    if (contentEl) contentEl.textCocontent = scheduleItem.content;
+    if (timeEl) timeEl.textCocontent = `📅 安排时间：${scheduleItem.time}`;
+    overlay.classList.add('show');
+  }
+  
+  // 开始持续响铃
+  startContinuousBeep();
+}
+
+// 声音提醒（持续响铃版）
+function startReminderTimer() {
+  if (scheduleTimer) clearInterval(scheduleTimer);
+  scheduleTimer = setInterval(() => {
+    const now = new Date();
+    const currentHHMM = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    const currentSS = now.getSends();
+    
+    const data = loadSchedule();
+    data.forEach(s => {
+      // 每分钟开始时触发（秒数<3时）
+      if (s.remindTime === currentHHMM && !s.notified && currentSS < 3) {
+        s.notified = true;
+        saveScheduleData(data);
+        triggerReminder(s);
+        renderSchedule();
+      }
+      // 如果提醒弹窗已显示且仍在响铃，每30秒再次触发弹窗效果
+      if (s.remindTime === currentHHMM && s.notified && activeReminderItem && currentSS === 0) {
+        // 已经在响铃，不需要重复触发
+      }
+    });
+    
+    // 检查是否需要重新提醒（每小时重复一次）
+    data.forEach(s => {
+      if (s.remindTime === currentHHMM && s.notified && activeReminderItem && activeReminderItem.id === s.id) {
+        const now2 = new Date();
+        // 如果是提醒时间且未关闭，每分钟提示一次
+        if (now2.getMinutes() === parseInt(s.remindTime.split(':')[1])) {
+          // 持续响铃已经在运行
+        }
+      }
+    });
+  }, 1000);
+}
+
+// ===== 页面切换 =====
+function showPage(name, el) {
+  // 隐藏所有页面
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // 取消所有导航项的激活状态
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  
+  // 显示目标页面
+  const pageEl = document.getElementById('page-' + name);
+  if (pageEl) pageEl.classList.add('active');
+  
+  // 激活对应导航项
+  if (el) {
+    el.classList.add('active');
+  } else {
+    // 如果没有传入el，尝试通过onclick属性查找
+    document.querySelectorAll('.nav-item').forEach(item => {
+      if (item.getAttribute('onclick') && item.getAttribute('onclick').includes("'" + name + "'")) {
+        item.classList.add('active');
+      }
+    });
+  }
+  
+  const titles = {home:'工作台首页',lesson:'备课工具',homework:'作业管理',students:'学生管理',grades:'成绩管理',resources:'教学资源',attendance:'班级考勤',journal:'教学日志',announce:'通知公告',profile:'个人中心'};
+  const titleEl = document.getElementById('pageTitle');
+  if (titleEl) titleEl.textCocontent = titles[name]||name;
+  
+  // 刷新对应页面的数据
+  const refreshers = {home:refreshHome,lesson:renderLessons,homework:refreshHWPage,students:renderStudents,grades:loadGradeSelects,resources:refreshResources,attendance:initAttendance,journal:initJournal,announce:renderAnnounce,profile:renderProfile};
+  if (refreshers[name]) {
+    setTimeout(() => refreshers[name](), 50); // 延迟执行确保DOM已渲染
+  }
+  
+  // 更新URL hash以支持刷新后保持页面状态
+  history.replaceState(null, '', '#' + name);
+}
+
+function logout() { sessionStorage.removeItem('edu_current_user'); window.location.href='index.html'; }
+function showToast(msg) { const el=document.getElementById('toast'); if(!el) return; el.textCocontent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2500); }
+function openModal(id) { const el=document.getElementById(id); if(el) el.classList.add('show'); }
+function closeModal(id) { const el=document.getElementById(id); if(el) el.classList.remove('show'); }
+
+// ===== 数据获取 =====
+function getMyStudents() {
+  return JSON.parse(localStorage.getItem('edu_students')||'[]').filter(s => s.teacherId === user.id);
+}
+function getMyLessons() {
+  return JSON.parse(localStorage.getItem('edu_lessons')||'[]').filter(l => l.teacherId === user.id);
+}
+function getMyHW() {
+  return JSON.parse(localStorage.getItem('edu_homework')||'[]').filter(h => h.teacherId === user.id);
+}
+function getMyRes() {
+  return JSON.parse(localStorage.getItem('edu_resources')||'[]').filter(r => r.teacherId === user.id);
+}
+
+// ===== 工作台首页 =====
+function refreshHome() {
+  const students = getMyStudents();
+  const lessons = getMyLessons();
+  const hw = getMyHW();
+  const res = getMyRes();
+  const elS = document.getElementById('stat-students');
+  const elL = document.getElementById('stat-lessons');
+  const elH = document.getElementById('stat-hw');
+  const elR = document.getElementById('stat-res');
+  if(elS) elS.textCocontent = students.length;
+  if(elL) elL.textCocontent = lessons.length;
+  if(elH) elH.textCocontent = hw.filter(h=>h.status==='pending').length;
+  if(elR) elR.textCocontent = res.length;
+
+  const recentEl = document.getElementById('recent-lessons');
+  if (recentEl) {
+    const recent = [...lessons].reverse().slice(0,3);
+    if (recent.length === 0) {
+      recentEl.innerHTML = '<div class="empty-state"><div class="empty-in">📝</div><p>还没有备课记录</p></div>';
+    } else {
+      const statusMap = {draft:'badge-gray',ready:'badge-blue',done:'badge-green'};
+      const statusText = {draft:'草稿',ready:'已准备',done:'已完成'};
+      recentEl.innerHTML = recent.map(l=>`
+        <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #f0f4f8;">
+          <div style="font-size:20px;">📝</div>
+          <div style="flex:1;">
+            <div style="font-weight:500;font-size:13px;color:#1a3a2a;">${l.title}</div>
+            <div style="font-size:12px;color:#718096;margin-top:2px;">${l.subject||''} · ${l.class||''} · ${l.date||''}</div>
+          </div>
+          <span class="badge ${statusMap[l.status]||'badge-gray'}">${statusText[l.status]||'草稿'}</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  const announceEl = document.getElementById('home-announce');
+  if (announceEl) {
+    const announcements = JSON.parse(localStorage.getItem('edu_announcements')||'[]');
+    if (announcements.length === 0) {
+      announceEl.innerHTML = '<div class="empty-state"><div class="empty-in">📢</div><p>暂无公告</p></div>';
+    } else {
+      announceEl.innerHTML = announcements.slice(0,3).map(a=>`
+        <div style="padding:12px 14px;border:1px solid #edf2f7;border-radius:8px;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;color:#1a3a2a;">${a.title}</div>
+          <div style="font-size:12px;color:#718096;margin-top:4px;">${a.content}</div>
+        </div>
+      `).join('');
+    }
+  }
+  renderSchedule();
+}
+
+// ===== 备课工具（增强版：模板+生成作业+打印）=====
+let allLessons = [];
+
+
+function renderLessons(list) {
+  allLessons = getMyLessons();
+  const data = list || allLessons;
+  const el = document.getElementById('lesson-list');
+  if (!el) return;
+  if (data.length === 0) { el.innerHTML = '<div class="empty-state"><div class="empty-in">📝</div><p>暂无备课记录，点击上方模板或按钮创建</p></div>'; return; }
+  const statusMap={draft:'badge-gray',ready:'badge-blue',done:'badge-green'};
+  const statusText={draft:'草稿',ready:'已准备',done:'已完成'};
+  el.innerHTML = data.map(l=>`
+    <div class="lesson-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+        <div>
+          <div class="lesson-card-title">${l.title}</div>
+          <div class="lesson-card-meta">
+            <span>📚 ${l.subject||'—'}</span><span>🏫 ${l.class||'—'}</span><span>📅 ${l.date||'—'}</span><span>⏱ ${l.hours||1}课时</span>
+          </div>
+        </div>
+        <span class="badge ${statusMap[l.status]||'badge-gray'}">${statusText[l.status]||'草稿'}</span>
+      </div>
+      ${l.objective ? `<div style="margin-top:8px;"><span style="font-size:12px;color:#718096;font-weight:600;">【教学目标】</span><span style="font-size:13px;color:#4a5568;"> ${l.objective}</span></div>` : ''}
+      ${l.content ? `<div class="lesson-card-content"><strong>教学内容：</strong>${l.content}</div>` : ''}
+      ${l.method ? `<div style="margin-top:6px;font-size:12px;color:#718096;"><strong>教学方法：</strong>${l.method}</div>` : ''}
+      ${l.homework ? `<div style="margin-top:6px;font-size:12px;color:#ea580c;"><strong>课后作业：</strong>${l.homework}</div>` : ''}
+      <div class="lesson-card-actions">
+        <button class="btn btn-outline btn-sm" onclick="editLesson('${l.id}')">✏️ 编辑</button>
+        <button class="btn btn-outline btn-sm" onclick="generateHWFromLesson('${l.id}')">📋 生成作业</button>
+        <button class="btn btn-outline btn-sm" onclick="printLesson('${l.id}')">🖨️ 打印</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteLesson('${l.id}')">🗑️ 删除</button>
+        ${l.status!=='done'?`<button class="btn btn-sm" style="background:#f0fff4;color:#16a34a;border:1px solid #bbf7d0;" onclick="markLessonDone('${l.id}')">✅ 标记完成</button>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function searchLessons(q) { renderLessons(allLessons.filter(l=>l.title.includes(q)||(l.content||'').includes(q))); }
+
+function openLessonModalWithTemplate(templateName) {
+  const template = lessonTemplates[templateName] || { content: '', method: '' };
+  const contentEl = document.getElementById('l-content');
+  const methodEl = document.getElementById('l-method');
+  if (contentEl) contentEl.value = template.content;
+  if (methodEl) methodEl.value = template.method;
+  
+  const titleEl = document.getElementById('lesson-modal-title');
+  if (titleEl) titleEl.textCocontent = `新建备课 - ${templateName}`;
+  
+  ['l-title','l-class','l-objective','l-homework'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const hoursEl = document.getElementById('l-hours'); if(hoursEl) hoursEl.value='2';
+  const dateEl = document.getElementById('l-date'); if(dateEl) dateEl.value=new Date().toISOString().split('T')[0];
+  const statusEl = document.getElementById('l-status'); if(statusEl) statusEl.value='draft';
+  const subjectEl = document.getElementById('l-subject'); if(subjectEl) subjectEl.value=user.subject||'语文';
+  const editEl = document.getElementById('l-edit-id'); if(editEl) editEl.value='';
+  
+  openModal('lesson-modal');
+}
+
+function openLessonModal() {
+  ['l-title','l-class','l-objective','l-content','l-method','l-homework'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const hoursEl = document.getElementById('l-hours'); if(hoursEl) hoursEl.value='2';
+  const dateEl = document.getElementById('l-date'); if(dateEl) dateEl.value=new Date().toISOString().split('T')[0];
+  const statusEl = document.getElementById('l-status'); if(statusEl) statusEl.value='draft';
+  const subjectEl = document.getElementById('l-subject'); if(subjectEl) subjectEl.value=user.subject||'语文';
+  const editEl = document.getElementById('l-edit-id'); if(editEl) editEl.value='';
+  const titleEl = document.getElementById('lesson-modal-title'); if(titleEl) titleEl.textCocontent='新建备课';
+  openModal('lesson-modal');
+}
+
+function editLesson(id) {
+  const l = getMyLessons().find(x=>x.id===id); if(!l) return;
+  document.getElementById('l-title').value=l.title;
+  document.getElementById('l-subject').value=l.subject||'';
+  document.getElementById('l-class').value=l.class||'';
+  document.getElementById('l-hours').value=l.hours||2;
+  document.getElementById('l-date').value=l.date||'';
+  document.getElementById('l-objective').value=l.objective||'';
+  document.getElementById('l-content').value=l.content||'';
+  document.getElementById('l-method').value=l.method||'';
+  document.getElementById('l-homework').value=l.homework||'';
+  document.getElementById('l-status').value=l.status||'draft';
+  document.getElementById('l-edit-id').value=id;
+  document.getElementById('lesson-modal-title').textCocontent='编辑备课';
+  openModal('lesson-modal');
+}
+
+function saveLesson() {
+  const title = document.getElementById('l-title').value.trim();
+  if(!title){ showToast('❌ 请填写课程标题'); return; }
+  const obj = {
+    id: document.getElementById('l-edit-id').value || 'l'+Date.now(),
+    teacherId: user.id,
+    title, subject:document.getElementById('l-subject').value,
+    class:document.getElementById('l-class').value.trim(),
+    hours:document.getElementById('l-hours').value,
+    date:document.getElementById('l-date').value,
+    objective:document.getElementById('l-objective').value.trim(),
+    content:document.getElementById('l-content').value.trim(),
+    method:document.getElementById('l-method').value.trim(),
+    homework:document.getElementById('l-homework').value.trim(),
+    status:document.getElementById('l-status').value,
+    createdAt:new Date().toLocaleDateString('zh-CN')
+  };
+  let lessons = JSON.parse(localStorage.getItem('edu_lessons')||'[]');
+  const editId = document.getElementById('l-edit-id').value;
+  if(editId){ const i=lessons.findIndex(x=>x.id===editId); if(i>=0)lessons[i]=obj; }
+  else lessons.push(obj);
+  localStorage.setItem('edu_lessons',JSON.stringify(lessons));
+  closeModal('lesson-modal'); renderLessons(); showToast('✅ 备课已保存');
+}
+
+function deleteLesson(id) {
+  if(!confirm('确定删除此备课记录？此操作不可恢复！')) return;
+  let lessons = JSON.parse(localStorage.getItem('edu_lessons')||'[]');
+  localStorage.setItem('edu_lessons',JSON.stringify(lessons.filter(l=>l.id!==id)));
+  renderLessons(); showToast('✅ 已删除');
+}
+
+function markLessonDone(id) {
+  let lessons = JSON.parse(localStorage.getItem('edu_lessons')||'[]');
+  const i = lessons.findIndex(l=>l.id===id);
+  if(i>=0) lessons[i].status='done';
+  localStorage.setItem('edu_lessons',JSON.stringify(lessons));
+  renderLessons(); showToast('✅ 已标记为完成');
+}
+
+// 从备课生成作业
+function generateHWFromLesson(id) {
+  const lesson = getMyLessons().find(l => l.id === id);
+  if (!lesson) return;
+  
+  // 打开作业模态框并填充数据
+  openHWModal();
+  document.getElementById('hw-title').value = lesson.homework || lesson.title + ' - 课后作业';
+  document.getElementById('hw-subject').value = lesson.subject || '语文';
+  document.getElementById('hw-class').value = lesson.class || '';
+  document.getElementById('hw-deadline').value = new Date(Date.now() + 7*86400000).toISOString().split('T')[0];
+  document.getElementById('hw-type').value = '书面';
+  document.getElementById('hw-content').value = lesson.content || '';
+  
+  showToast('📋 已根据备课内容生成作业，请检查并调整后保存');
+}
+
+// 打印备课内容
+function printLesson(id) {
+  const lesson = getMyLessons().find(l => l.id === id);
+  if (!lesson) return;
+  
+  const statusMap={draft:'草稿',ready:'已准备',done:'已完成'};
+  const printcontent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>备课教案 - ${lesson.title}</title>
+      <style>
+        body { font-family: 'SimSun', serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 24px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        h2 { font-size: 18px; margin-top: 20px; border-left: 4px solid #16a34a; padding-left: 10px; }
+        p { line-height: 1.8; font-size: 14px; }
+        .info { text-align: center; color: #666; margin-bottom: 30px; }
+        .content { white-space: pre-wrap; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      <h1>📝 备课教案</h1>
+      <div class="info">
+        <strong>${lesson.title}</strong> | ${lesson.subject || '—'} | ${lesson.class || '—'} | ${lesson.date || '—'} | ${lesson.hours || 1}课时 | 状态：${statusMap[lesson.status] || '草稿'}
+      </div>
+      <h2>一、教学目标</h2>
+      <p class="content">${lesson.objective || '（未填写）'}</p>
+      <h2>二、教学内容与重难点</h2>
+      <p class="content">${lesson.content || '（未填写）'}</p>
+      <h2>三、教学方法</h2>
+      <p class="content">${lesson.method || '（未填写）'}</p>
+      <h2>四、课后作业</h2>
+      <p class="content">${lesson.homework || '（未填写）'}</p>
+      <scr` + `ipt>window.onload = function() { window.print(); }</scr` + `ipt>
+    </bod` + `y>
+    </ht` + `ml>
+  `;
+  
+  const newWindow = window.open('', '_blank');
+  newWindow.document.write(printcontent);
+  newWindow.document.close();
+}
+
+// ===== 作业管理（增强：删除+标记完成）=====
+let allHW = [];
+let currentHWId = null;
+
+function refreshHWPage() {
+  renderHWList();
+  renderHWStudents();
+}
+
+function renderHWList() {
+  allHW = getMyHW();
+  const el = document.getElementById('hw-list');
+  if (!el) return;
+  if (allHW.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-in">📋</div><p>暂无作业，请先布置作业</p></div>';
+    return;
+  }
+  el.innerHTML = allHW.map(h => `
+    <div class="hw-list-item ${currentHWId===h.id?'active':'inactive'}" onclick="selectHW('${h.id}')">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;color:#1a3a2a;">${h.title}</div>
+        <div style="font-size:11px;color:#718096;margin-top:2px;">${h.class||''} · 截止：${h.deadline||'—'} · ${h.type||'书面作业'}</div>
+      </div>
+      <span class="badge ${h.status==='pending'?'badge-orange':'badge-green'}">${h.status==='pending'?'进行中':'已完成'}</span>
+      <div class="hw-item-actions">
+        ${h.status==='pending' ? `<button class="hw-done-btn" onclick="event.stopPropagation();markHWComplete('${h.id}')">✅ 完成</button>` : ''}
+        <button class="hw-del-btn" onclick="event.stopPropagation();deleteHW('${h.id}')">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectHW(id) {
+  currentHWId = id;
+  renderHWList();
+  renderHWStudents();
+}
+
+// 标记作业完成
+function markHWComplete(id) {
+  let hw = JSON.parse(localStorage.getItem('edu_homework')||'[]');
+  const i = hw.findIndex(h=>h.id===id);
+  if (i>=0) {
+    hw[i].status = 'done';
+    localStorage.setItem('edu_homework', JSON.stringify(hw));
+    showToast('✅ 作业已标记为完成');
+    refreshHWPage();
+  }
+}
+
+// 删除作业
+function deleteHW(id) {
+  if (!confirm('确定删除该作业？删除后不可恢复！')) return;
+  let hw = JSON.parse(localStorage.getItem('edu_homework')||'[]');
+  hw = hw.filter(h=>h.id!==id);
+  localStorage.setItem('edu_homework', JSON.stringify(hw));
+  if (currentHWId === id) currentHWId = null;
+  showToast('✅ 作业已删除');
+  refreshHWPage();
+}
+
+// ===== 作业评分功能 =====
+const gradeBadge = { A: 'badge-green', B: 'badge-blue', C: 'badge-orange', D: 'badge-red' };
+
+function renderHWStudents() {
+  const tbody = document.getElementById('hw-table-body');
+  if (!tbody) return;
+  if (!currentHWId) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-in">📋</div><p>请点击上方作业列表中的作业，查看学生完成情况</p></div></td></tr>';
+    return;
+  }
+  const students = getMyStudents();
+  if (students.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-in">🎓</div><p>暂无学生数据，请先在"学生管理"中添加学生</p></div></td></tr>';
+    return;
+  }
+  const hw = allHW.find(h => h.id === currentHWId);
+  const mpletedIds = (hw && hw.mpletedStudents) || [];
+  const studentGrades = (hw && hw.studentGrades) || {}; // 每个学生的评分 { sid: 'A' }
+  
+  tbody.innerHTML = students.map(s => {
+    const isCompleted = mpletedIds.includes(s.id);
+    const currentGrade = studentGrades[s.id];
+    return `<tr style="${isCompleted?'background:#f0fff4;':''}">
+      <td><input type="checkbox" class="hw-checkbox" data-sid="${s.id}" ${isCompleted?'checked':''} onchange="toggleHWComplete('${s.id}',this.checked)"></td>
+      <td><div style="display:flex;align-items:center;gap:8px;"><div style="width:26px;height:26px;border-radius:50%;background:${s.gender==='女'?'#fce7f3':'#eff6ff'};color:${s.gender==='女'?'#db2777':'#2563eb'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;">${s.name[0]}</div>${s.name}</div></td>
+      <td style="font-size:12px;color:#718096;">${s.no||'—'}</td>
+      <td><span class="badge badge-green">${s.class||'—'}</span></td>
+      <td><span class="badge ${isCompleted?'badge-green':'badge-orange'}">${isCompleted?'✅ 已完成':'⏳ 未完成'}</span></td>
+      <td style="font-size:13px;font-weight:600;color:${ (s.unsubmittedCount||0)>=3?'#dc2626':'#718096'};">${s.unsubmittedCount||0} 次</td>
+      <td>
+        ${isCompleted?`<div style="display:flex;gap:4px;align-items:center;">
+          <button onclick="setStudentHWGrade('${s.id}','A')" style="padding:3px 8px;background:${currentGrade==='A'?'#16a34a':'#f0fff4'};color:${currentGrade==='A'?'#fff':'#16a34a'};border:1px solid ${currentGrade==='A'?'#16a34a':'#bbf7d0'};border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;">A</button>
+          <button onclick="setStudentHWGrade('${s.id}','B')" style="padding:3px 8px;background:${currentGrade==='B'?'#2563eb':'#eff6ff'};color:${currentGrade==='B'?'#fff':'#2563eb'};border:1px solid ${currentGrade==='B'?'#2563eb':'#bfdbfe'};border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;">B</button>
+          <button onclick="setStudentHWGrade('${s.id}','C')" style="padding:3px 8px;background:${currentGrade==='C'?'#ea580c':'#fff7ed'};color:${currentGrade==='C'?'#fff':'#ea580c'};border:1px solid ${currentGrade==='C'?'#ea580c':'#fed7aa'};border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;">C</button>
+          <button onclick="setStudentHWGrade('${s.id}','D')" style="padding:3px 8px;background:${currentGrade==='D'?'#dc2626':'#fef2f2'};color:${currentGrade==='D'?'#fff':'#dc2626'};border:1px solid ${currentGrade==='D'?'#dc2626':'#fecaca'};border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;">D</button>
+        </div>`:'<span style="color:#a0aec0;font-size:12px;">—</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// 设置学生作业评分
+function setStudentHWGrade(sid, grade) {
+  const hw = allHW.find(h => h.id === currentHWId);
+  if (!hw) return;
+  
+  if (!hw.studentGrades) hw.studentGrades = {};
+  
+  const prevGrade = hw.studentGrades[sid];
+  hw.studentGrades[sid] = grade;
+  
+  // 更新学生的评分次数统计
+  let students = JSON.parse(localStorage.getItem('edu_students')||'[]');
+  const idx = students.findIndex(s => s.id === sid);
+  if (idx >= 0) {
+    // 减去之前的评分次数
+    if (prevGrade) {
+      students[idx]['grade' + prevGrade + 'Count'] = Math.max(0, (students[idx]['grade' + prevGrade + 'Count'] || 0) - 1);
+    }
+    // 增加新评分次数
+    students[idx]['grade' + grade + 'Count'] = (students[idx]['grade' + grade + 'Count'] || 0) + 1;
+    localStorage.setItem('edu_students', JSON.stringify(students));
+  }
+  
+  // 保存作业数据
+  let allHWData = JSON.parse(localStorage.getItem('edu_homework')||'[]');
+  const hi = allHWData.findIndex(h => h.id === currentHWId);
+  if (hi >= 0) allHWData[hi] = hw;
+  localStorage.setItem('edu_homework', JSON.stringify(allHWData));
+  allHW = getMyHW();
+  renderHWStudents();
+  showToast(`✅ 已将 ${getMyStudents().find(s=>s.id===sid)?.name||'学生'} 评为 ${grade} 等`);
+}
+
+function toggleHWComplete(sid, completed) {
+  const hw = allHW.find(h => h.id === currentHWId);
+  if (!hw) return;
+  if (!hw.mpletedStudents) hw.mpletedStudents = [];
+  if (completed) {
+    if (!hw.mpletedStudents.includes(sid)) hw.mpletedStudents.push(sid);
+  } else {
+    hw.mpletedStudents = hw.mpletedStudents.filter(id => id !== sid);
+    // 不在这里直接增加未交次数，等提交统计时再计算
+  }
+  // 保存作业数据
+  let allHWData = JSON.parse(localStorage.getItem('edu_homework')||'[]');
+  const hi = allHWData.findIndex(h => h.id === currentHWId);
+  if (hi >= 0) allHWData[hi] = hw;
+  localStorage.setItem('edu_homework', JSON.stringify(allHWData));
+  allHW = getMyHW();
+  renderHWStudents();
+}
+
+function submitHWCheck() {
+  if (!currentHWId) { showToast('❌ 请先选择作业'); return; }
+  const students = getMyStudents();
+  const hw = allHW.find(h => h.id === currentHWId);
+  const mpletedIds = (hw && hw.mpletedStudents) || [];
+  const uncompleted = students.filter(s => !mpletedIds.includes(s.id));
+  
+  // 提交统计时更新未交次数
+  let allStu = JSON.parse(localStorage.getItem('edu_students')||'[]');
+  students.forEach(s => {
+    const idx = allStu.findIndex(st => st.id === s.id);
+    if (idx >= 0) {
+      if (!mpletedIds.includes(s.id)) {
+        // 未完成，增加未交次数
+        allStu[idx].unsubmittedCount = (allStu[idx].unsubmittedCount||0) + 1;
+      }
+    }
+  });
+  localStorage.setItem('edu_students', JSON.stringify(allStu));
+  
+  const resultEl = document.getElementById('hw-result');
+  if (uncompleted.length === 0) {
+    resultEl.innerHTML = '<div style="padding:12px 16px;background:#f0fff4;border:1px solid #bbf7d0;border-radius:10px;color:#16a34a;font-size:13px;">🎉 全部学生已完成作业！</div>';
+  } else {
+    resultEl.innerHTML = `
+      <div style="padding:14px 16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;">
+        <div style="font-size:14px;font-weight:600;color:#c2410c;margin-bottom:8px;">⚠️ 未完成作业的学生（共 ${uncompleted.length} 人）</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${uncompleted.map(s => `<span style="padding:3px 10px;background:#fff;border:1px solid #fecaca;border-radius:20px;font-size:12px;color:#c2410c;">${s.name}（未交${s.unsubmittedCount||0}次）</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+  showToast('✅ 统计完成！' + (uncompleted.length>0 ? `有 ${uncompleted.length} 人未完成` : '全部完成！'));
+  // 刷新学生列表以更新未交次数显示
+  renderHWStudents();
+}
+
+function toggleAllHW(el) {
+  const checked = el.checked;
+  document.querySelectorAll('.hw-checkbox').forEach(cb => { cb.checked = checked; toggleHWComplete(cb.dataset.sid, checked); });
+}
+
+function searchHW(q) { /* 保留接口 */ }
+
+function openHWModal() {
+  ['hw-title','hw-class','hw-content'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const subjEl = document.getElementById('hw-subject'); if(subjEl) subjEl.value=user.subject||'语文';
+  const dateEl = document.getElementById('hw-deadline'); if(dateEl) dateEl.value=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+  const typeEl = document.getElementById('hw-type'); if(typeEl) typeEl.value='书面';
+  const editEl = document.getElementById('hw-edit-id'); if(editEl) editEl.value='';
+  // 加载学生列表供选择
+  const pickEl = document.getElementById('hw-student-pick');
+  if (pickEl) {
+    const students = getMyStudents();
+    if (students.length === 0) {
+      pickEl.innerHTML = '<div style="font-size:12px;color:#a0aec0;">请先保存学生数据</div>';
+    } else {
+      pickEl.innerHTML = students.map(s => `
+        <label style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;margin-bottom:4px;font-size:12px;color:#4a5568;cursor:pointer;">
+          <input type="checkbox" value="${s.id}" style="accent-color:#16a34a;"> ${s.name}
+        </label>
+      `).join('');
+    }
+  }
+  openModal('hw-modal');
+}
+
+function saveHW() {
+  const title = document.getElementById('hw-title').value.trim();
+  const deadline = document.getElementById('hw-deadline').value;
+  if(!title||!deadline){ showToast('❌ 请填写作业标题和截止日期'); return; }
+  // 收集选中的学生
+  const pickEl = document.getElementById('hw-student-pick');
+  let selectedIds = [];
+  if (pickEl) {
+    selectedIds = Array.from(pickEl.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+  }
+  const obj = {
+    id: document.getElementById('hw-edit-id').value || 'h'+Date.now(),
+    teacherId: user.id,
+    title, subject: document.getElementById('hw-subject').value,
+    class: document.getElementById('hw-class').value.trim(),
+    deadline, type: document.getElementById('hw-type').value,
+    content: document.getElementById('hw-content').value.trim(),
+    status: 'pending',
+    grade: '',
+    mpletedStudents: selectedIds,
+    createdAt: new Date().toLocaleDateString('zh-CN')
+  };
+  let hw = JSON.parse(localStorage.getItem('edu_homework')||'[]');
+  const editId = document.getElementById('hw-edit-id').value;
+  if(editId){const i=hw.findIndex(x=>x.id===editId);if(i>=0)hw[i]=obj;}else hw.push(obj);
+  localStorage.setItem('edu_homework',JSON.stringify(hw));
+  closeModal('hw-modal'); refreshHWPage(); showToast('✅ 作业布置成功');
+}
+
+// ===== 学生管理 =====
+let allStudents = [];
+function renderStudents(list) {
+  allStudents = getMyStudents();
+  const data = list || allStudents;
+  const classes = [...new Set(allStudents.map(s=>s.class).filter(Boolean))];
+  const sel = document.getElementById('class-filter');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML='<option value="">全部班级</option>'+classes.map(c=>`<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('');
+  }
+  const tbody = document.getElementById('student-table-body');
+  if (!tbody) return;
+  if (data.length === 0) { tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="empty-in">🎓</div><p>暂无学生数据</p></div></td></tr>'; return; }
+  tbody.innerHTML = data.map(s => `<tr>
+    <td><div style="display:flex;align-items:center;gap:8px;">
+      <div style="width:30px;height:30px;border-radius:50%;background:${(s.unsubmittedCount||0)>=5?'#fef2f2':'#fce7f3'};color:${(s.unsubmittedCount||0)>=5?'#dc2626':'#db2777'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">${s.name[0]}</div>
+      <span style="font-weight:500;color:${(s.unsubmittedCount||0)>=5?'#dc2626':'#1a3a2a'};">${s.name}</span>
+    </div></td>
+    <td style="font-size:12px;color:#718096;">${s.no||'—'}</td>
+    <td><span class="badge badge-green">${s.class||'—'}</span></td>
+    <td><span class="badge ${s.gender==='女'?'badge-purple':'badge-blue'}">${s.gender||'—'}</span></td>
+    <td style="font-size:12px;color:#718096;">${s.parent?s.parent+' ':''}${s.phone||''}</td>
+    <td><span style="font-size:14px;font-weight:700;color:${(s.unsubmittedCount||0)>=5?'#dc2626':'#ea580c'}">${s.unsubmittedCount||0}</span><span style="font-size:11px;color:#a0aec0;"> 次</span>
+      <button onclick="editMissCount('${s.id}', ${s.unsubmittedCount||0})" style="margin-left:4px;padding:2px 8px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit;" title="点击修改">✏️</button>
+    </td>
+    <td style="font-size:12px;color:#718096;">${s.note||'—'}</td>
+    <td><div style="display:flex;gap:6px;">
+      <button class="btn btn-outline btn-sm" onclick="editStudent('${s.id}')">编辑</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s.id}')">删除</button>
+    </div></td>
+  </tr>`).join('');
+  renderGradeRanking();
+}
+
+function searchStudents(q){ renderStudents(allStudents.filter(s=>s.name.includes(q)||(s.no||'').includes(q))); }
+function filterStudentClass(cls){ renderStudents(cls?allStudents.filter(s=>s.class===cls):null); }
+
+// 学生评分排名
+function renderGradeRanking() {
+  const students = getMyStudents();
+  const rankingEl = document.getElementById('grade-ranking');
+  if (!rankingEl) return;
+  
+  // 计算总分（A=4, B=3, C=2, D=1）
+  const ranked = students.map(s => ({
+    ...s,
+    totalSre: (s.gradeACount || 0) * 4 + (s.gradeBCount || 0) * 3 + (s.gradeCCount || 0) * 2 + (s.gradeDCount || 0) * 1,
+    gradeA: s.gradeACount || 0,
+    gradeB: s.gradeBCount || 0,
+    gradeC: s.gradeCCount || 0,
+    gradeD: s.gradeDCount || 0
+  })).filter(s => s.totalScore > 0).sort((a, b) => b.totalScore - a.totalScore);
+  
+  if (ranked.length === 0) {
+    rankingEl.innerHTML = '<div class="empty-state"><div class="empty-in">🏆</div><p>暂无评分记录</p></div>';
+    return;
+  }
+  
+  rankingEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">
+      ${ranked.map((s, i) => `
+        <div style="padding:14px;border:1.5px solid ${i===0?'#fbbf24':i===1?'#94a3b8':i===2?'#cd7c2a':'#e2e8f0'};border-radius:12px;background:${i===0?'#fefce8':i===1?'#f8fafc':i===2?'#fffbeb':'#fff'};">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:${i===0?'#fbbf24':i===1?'#94a3b8':i===2?'#cd7c2a':'#e2e8f0'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">${i+1}</div>
+            <div>
+              <div style="font-weight:600;color:#1a3a2a;">${s.name}</div>
+              <div style="font-size:11px;color:#718096;">${s.class||'—'}</div>
+            </div>
+            <div style="margin-left:auto;text-align:right;">
+              <div style="font-size:18px;font-weight:700;color:#16a34a;">${s.totalScore}</div>
+              <div style="font-size:10px;color:#718096;">总分</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;">
+            <span style="flex:1;text-align:center;padding:4px 6px;background:#f0fff4;color:#16a34a;border-radius:4px;font-size:11px;font-weight:600;">A×${s.gradeA}</span>
+            <span style="flex:1;text-align:center;padding:4px 6px;background:#eff6ff;color:#2563eb;border-radius:4px;font-size:11px;font-weight:600;">B×${s.gradeB}</span>
+            <span style="flex:1;text-align:center;padding:4px 6px;background:#fff7ed;color:#ea580c;border-radius:4px;font-size:11px;font-weight:600;">C×${s.gradeC}</span>
+            <span style="flex:1;text-align:center;padding:4px 6px;background:#fef2f2;color:#dc2626;border-radius:4px;font-size:11px;font-weight:600;">D×${s.gradeD}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// 重置排行榜
+function resetGradeRanking() {
+  if (!confirm('确定要重置所有学生的评分记录吗？此操作不可恢复！')) return;
+  let students = JSON.parse(localStorage.getItem('edu_students')||'[]');
+  students.forEach(s => {
+    s.gradeACount = 0;
+    s.gradeBCount = 0;
+    s.gradeCCount = 0;
+    s.gradeDCount = 0;
+  });
+  localStorage.setItem('edu_students', JSON.stringify(students));
+  renderGradeRanking();
+  showToast('✅ 排行榜已重置');
+}
+
+function openStudentModal() {
+  ['s-name','s-no','s-class','s-parent','s-phone','s-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const genderEl = document.getElementById('s-gender'); if(genderEl) genderEl.value='男';
+  const editEl = document.getElementById('s-edit-id'); if(editEl) editEl.value='';
+  const titleEl = document.getElementById('stu-modal-title'); if(titleEl) titleEl.textCocontent='添加学生';
+  openModal('student-modal');
+}
+
+function editStudent(id) {
+  const s = allStudents.find(x=>x.id===id); if(!s)return;
+  document.getElementById('s-name').value=s.name;
+  document.getElementById('s-no').value=s.no||'';
+  document.getElementById('s-class').value=s.class||'';
+  document.getElementById('s-gender').value=s.gender||'男';
+  document.getElementById('s-parent').value=s.parent||'';
+  document.getElementById('s-phone').value=s.phone||'';
+  document.getElementById('s-note').value=s.note||'';
+  document.getElementById('s-edit-id').value=id;
+  document.getElementById('stu-modal-title').textCocontent='编辑学生';
+  openModal('student-modal');
+}
+
+function saveStudent() {
+  const name=document.getElementById('s-name').value.trim();
+  const cls=document.getElementById('s-class').value.trim();
+  if(!name||!cls){ showToast('❌ 请填写学生姓名和班级'); return; }
+  const obj={
+    id:document.getElementById('s-edit-id').value||'s'+Date.now(),
+    teacherId:user.id, name, no:document.getElementById('s-no').value.trim(),
+    class:cls, gender:document.getElementById('s-gender').value,
+    parent:document.getElementById('s-parent').value.trim(),
+    phone:document.getElementById('s-phone').value.trim(),
+    note:document.getElementById('s-note').value.trim(),
+    unsubmittedCount:0
+  };
+  let students=JSON.parse(localStorage.getItem('edu_students')||'[]');
+  const editId=document.getElementById('s-edit-id').value;
+  if(editId){const i=students.findIndex(x=>x.id===editId);if(i>=0){ obj.unsubmittedCount=students[i].unsubmittedCount||0; students[i]=obj; }}
+  else { obj.unsubmittedCount=0; students.push(obj); }
+  localStorage.setItem('edu_students',JSON.stringify(students));
+  closeModal('student-modal'); renderStudents(); showToast('✅ 学生信息已保存');
+}
+
+function deleteStudent(id) {
+  if(!confirm('确定删除该学生？'))return;
+  let students=JSON.parse(localStorage.getItem('edu_students')||'[]');
+  localStorage.setItem('edu_students',JSON.stringify(students.filter(s=>s.id!==id)));
+  renderStudents(); showToast('✅ 已删除');
+}
+
+// 修改未交作业次数
+function editMissCount(id, currentCount) {
+  const newCount = prompt('请输入未交作业次数：', currentCount);
+  if (newCount === null) return; // 用户取消
+  const num = parseInt(newCount);
+  if (isNaN(num) || num < 0) {
+    showToast('❌ 请输入有效的非负整数');
+    return;
+  }
+  let students = JSON.parse(localStorage.getItem('edu_students')||'[]');
+  const idx = students.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    students[idx].unsubmittedCount = num;
+    localStorage.setItem('edu_students', JSON.stringify(students));
+    renderStudents();
+    showToast(`✅ 未交作业次数已更新为 ${num}`);
+  }
+}
+
+// ===== 成绩管理 =====
+function loadGradeSelects() {
+  const classes=[...new Set(getMyStudents().map(s=>s.class).filter(Boolean))];
+  const sel=document.getElementById('grade-class-select');
+  if (sel) sel.innerHTML='<option value="">请选择班级</option>'+classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+
+function loadGradeTable() {
+  const cls=document.getElementById('grade-class-select').value;
+  const exam=document.getElementById('grade-exam-select').value;
+  const wrap=document.getElementById('grade-table-wrap');
+  if(!cls){ wrap.innerHTML='<div class="empty-state"><div class="empty-in">📊</div><p>请先选择班级</p></div>'; return; }
+  const students=getMyStudents().filter(s=>s.class===cls);
+  if(students.length===0){ wrap.innerHTML='<div class="empty-state"><div class="empty-in">🎓</div><p>该班级暂无学生数据</p></div>'; return; }
+  const grades=JSON.parse(localStorage.getItem('edu_grades')||'{}');
+  const key=`${user.id}_${cls}_${exam}`;
+  const saved=grades[key]||{};
+  wrap.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>学号</th><th>姓名</th><th>成绩（满分100）</th><th>等级</th><th>评语</th></tr></thead>
+    <tbody>${students.map(s=>{
+      const sc=saved[s.id]||{};
+      return `<tr>
+        <td style="font-size:12px;color:#718096;">${s.no||'—'}</td>
+        <td><div style="display:flex;align-items:center;gap:6px;"><div style="width:26px;height:26px;border-radius:50%;background:#f0fff4;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;">${s.name[0]}</div>${s.name}</div></td>
+        <td><input class="grade-input" type="number" min="0" max="100" id="grade_${s.id}" value="${sc.score||''}" oninput="updateGradeLevel('${s.id}')"></td>
+        <td id="level_${s.id}"><span class="badge ${getGradeBadge(sc.score)}">${getGradeLevel(sc.score)}</span></td>
+        <td><input style="width:120px;padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:12px;font-family:inherit;outline:none;" type="text" id="mment_${s.id}" value="${sc.comment||''}" placeholder="评语..."></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function updateGradeLevel(sid) {
+  const sc=parseFloat(document.getElementById('grade_'+sid).value);
+  const el=document.getElementById('level_'+sid);
+  if(el) el.innerHTML=`<span class="badge ${getGradeBadge(sc)}">${getGradeLevel(sc)}</span>`;
+}
+
+function getGradeLevel(score) {
+  if(score===undefined||score===''||isNaN(score)) return '—';
+  if(score>=90)return '优秀'; if(score>=75)return '良好'; if(score>=60)return '及格'; return '不及格';
+}
+function getGradeBadge(score) {
+  if(score===undefined||score===''||isNaN(score)) return 'badge-gray';
+  if(score>=90)return 'badge-green'; if(score>=75)return 'badge-blue'; if(score>=60)return 'badge-orange'; return 'badge-red';
+}
+
+function saveGrades() {
+  const cls=document.getElementById('grade-class-select').value;
+  const exam=document.getElementById('grade-exam-select').value;
+  if(!cls){ showToast('❌ 请先选择班级'); return; }
+  const students=getMyStudents().filter(s=>s.class===cls);
+  const grades=JSON.parse(localStorage.getItem('edu_grades')||'{}');
+  const key=`${user.id}_${cls}_${exam}`;
+  const saved={};
+  students.forEach(s=>{
+    const sreEl=document.getElementById('grade_'+s.id);
+    const mmentEl=document.getElementById('mment_'+s.id);
+    if(sreEl&&sreEl.value) saved[s.id]={ score:parseFloat(sreEl.value), comment:mmentEl?mmentEl.value:'' };
+  });
+  grades[key]=saved;
+  localStorage.setItem('edu_grades',JSON.stringify(grades));
+  
+  const sres=students.map(s=>parseFloat(saved[s.id]?.score)||0).filter(x=>x>0);
+  
+  // 构建预览表格数据
+  const previewData = students.map(s => {
+    const score = saved[s.id]?.score;
+    const comment = saved[s.id]?.comment || '';
+    return { ...s, score, level: getGradeLevel(score), comment };
+  }).filter(s => s.score);
+  
+  if(sres.length>0){
+    const avg=(sres.reduce((a,b)=>a+b,0)/sres.length).toFixed(1);
+    const mx=Math.max(...sres);
+    const mn=Math.min(...sres);
+    const pass=sres.filter(s=>s>=60).length;
+    const statsEl=document.getElementById('grade-stats');
+    if(statsEl) statsEl.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <div style="background:#f0fff4;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:11px;color:#718096;">班级平均分</div><div style="font-size:22px;font-weight:700;color:#16a34a;">${avg}</div></div>
+        <div style="background:#eff6ff;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:11px;color:#718096;">最高分</div><div style="font-size:22px;font-weight:700;color:#2563eb;">${mx}</div></div>
+        <div style="background:#fff7ed;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:11px;color:#718096;">最低分</div><div style="font-size:22px;font-weight:700;color:#ea580c;">${mn}</div></div>
+        <div style="background:#faf5ff;border-radius:8px;padding:14px;text-align:center;"><div style="font-size:11px;color:#718096;">及格率</div><div style="font-size:22px;font-weight:700;color:#7c3aed;">${(pass/sres.length*100).toFixed(0)}%</div></div>
+      </div>`;
+  }
+  
+  // 显示预览模态框
+  if (previewData.length > 0) {
+    const previewcontent = document.getElementById('grade-preview-content');
+    previewcontent.innerHTML = `
+      <div style="margin-bottom:12px;font-size:13px;color:#718096;">${cls} · ${exam} · 共 ${previewData.length} 名学生成绩</div>
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
+        <table style="font-size:13px;">
+          <thead style="position:sticky;top:0;background:#f7fafc;">
+            <tr>
+              <th>学号</th><th>姓名</th><th>班级</th><th>成绩</th><th>等级</th><th>评语</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${previewData.map(s => `
+              <tr>
+                <td style="color:#718096;">${s.no||'—'}</td>
+                <td style="font-weight:500;">${s.name}</td>
+                <td>${s.class||'—'}</td>
+                <td style="font-weight:600;color:#16a34a;">${s.score||'—'}</td>
+                <td><span class="badge ${getGradeBadge(s.score)}">${s.level||'—'}</span></td>
+                <td style="color:#718096;">${s.comment||'—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${sres.length>0?`<div style="margin-top:12px;padding:10px 14px;background:#f0fff4;border-radius:8px;font-size:13px;color:#16a34a;">
+        📊 统计：平均分 <strong>${(sres.reduce((a,b)=>a+b,0)/sres.length).toFixed(1)}</strong> | 
+        最高分 <strong>${Math.max(...sres)}</strong> | 
+        最低分 <strong>${Math.min(...sres)}</strong> | 
+        及格率 <strong>${(sres.filter(s=>s>=60).length/sres.length*100).toFixed(0)}%</strong>
+      </div>`:''}
+    `;
+    // 保存当前成绩数据供下载使用
+    window.currentGradeData = { cls, exam, students: previewData, sres };
+    openModal('grade-preview-modal');
+  } else {
+    showToast('✅ 成绩已保存（本次无录入成绩）');
+  }
+}
+
+// 下载成绩表
+function downloadGradeTable() {
+  if (!window.currentGradeData) {
+    showToast('❌ 无成绩数据可下载');
+    return;
+  }
+  const { cls, exam, students } = window.currentGradeData;
+  
+  // 构建CSV内容
+  let csv = '\uFEFF'; // BOM for Excel
+  csv += `${cls} - ${exam}\n`;
+  csv += '学号,姓名,班级,成绩,等级,评语\n';
+  students.forEach(s => {
+    const comment = (s.comment||'').replace(/"/g, '""');
+    csv += `${s.no||''},${s.name},${s.class||''},${s.score||''},${s.level||''},"${comment}"\n`;
+  });
+  
+  // 创建下载
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `成绩表_${cls}_${exam}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  
+  closeModal('grade-preview-modal');
+  showToast('✅ 成绩表已下载');
+}
+
+// ===== 教学资源（本地）=====
+function refreshResources() { renderRes(); }
+
+let allRes=[];
+function renderRes(list) {
+  allRes=getMyRes();
+  const data=list||allRes;
+  const el=document.getElementById('res-list');
+  if(!el) return;
+  if(data.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-in">📁</div><p>暂无已保存的教学资源</p></div>'; return; }
+  el.innerHTML=`<div class="res-grid">${data.map(r=>`
+    <div class="res-card">
+      <div class="res-in">${(r.type||'📄').split(' ')[0]}</div>
+      <div class="res-name">${r.name}</div>
+      <div class="res-meta" style="margin-top:4px;">
+        <span class="badge badge-blue" style="font-size:10px;">${r.subject||'—'}</span>
+        <span style="margin-left:6px;">${(r.type||'—').replace(/[^\u4e00-\u9fa5a-zA-Z（）]/g,'')}</span>
+      </div>
+      ${r.desc?`<div style="font-size:12px;color:#718096;margin-top:8px;line-height:1.5;">${r.desc}</div>`:''}
+      ${r.url?`<div style="margin-top:8px;"><a href="${r.url}" target="_blank" style="font-size:12px;color:#2563eb;text-deration:none;">🔗 访问资源</a></div>`:''}
+      <div class="res-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteRes('${r.id}')">删除</button>
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function searchRes(q){ renderRes(allRes.filter(r=>r.name.includes(q)||(r.desc||'').includes(q))); }
+
+function openResModal() {
+  ['r-name','r-url','r-desc'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const subjEl = document.getElementById('r-subject'); if(subjEl) subjEl.value=user.subject||'语文';
+  openModal('res-modal');
+}
+
+function saveRes() {
+  const name=document.getElementById('r-name').value.trim();
+  if(!name){ showToast('❌ 请填写资源名称'); return; }
+  const obj={ id:'r'+Date.now(), teacherId:user.id, name,
+    type:document.getElementById('r-type').value,
+    subject:document.getElementById('r-subject').value,
+    url:document.getElementById('r-url').value.trim(),
+    desc:document.getElementById('r-desc').value.trim(),
+    createdAt:new Date().toLocaleDateString('zh-CN')
+  };
+  let res=JSON.parse(localStorage.getItem('edu_resources')||'[]');
+  res.push(obj);
+  localStorage.setItem('edu_resources',JSON.stringify(res));
+  closeModal('res-modal'); renderRes(); showToast('✅ 资源添加成功');
+}
+
+function deleteRes(id) {
+  if(!confirm('确定删除此资源？'))return;
+  let res=JSON.parse(localStorage.getItem('edu_resources')||'[]');
+  localStorage.setItem('edu_resources',JSON.stringify(res.filter(r=>r.id!==id)));
+  renderRes(); showToast('✅ 已删除');
+}
+
+// ===== 通知公告 =====
+function renderAnnounce() {
+  const list=JSON.parse(localStorage.getItem('edu_announcements')||'[]');
+  const el=document.getElementById('announce-list');
+  if(!el) return;
+  if(list.length===0){ el.innerHTML='<div class="empty-state"><div class="empty-in">📢</div><p>暂无公告</p></div>'; return; }
+  const levelText={normal:'普通',important:'重要',urgent:'紧急'};
+  const levelBadge={normal:'badge-gray',important:'badge-blue',urgent:'badge-red'};
+  el.innerHTML=list.map(a=>`
+    <div style="padding:14px;border:1px solid #edf2f7;border-radius:8px;margin-bottom:8px;">
+      <div style="font-size:14px;font-weight:600;color:#1a3a2a;margin-bottom:6px;display:flex;align-items:center;gap:8px;">
+        ${a.title} <span class="badge ${levelBadge[a.level]||'badge-gray'}">${levelText[a.level]||'普通'}</span>
+      </div>
+      <div style="font-size:13px;color:#4a5568;line-height:1.6;">${a.content}</div>
+      <div style="font-size:12px;color:#a0aec0;margin-top:6px;">📅 ${a.createdAt}</div>
+    </div>
+  `).join('');
+}
+
+// ===== 个人中心 =====
+function renderProfile() {
+  const el = document.getElementById('profile-info');
+  if (!el) return;
+  el.innerHTML = `
+    <div><span style="color:#718096;">姓　　名：</span><strong>${user.name||'—'}</strong></div>
+    <div><span style="color:#718096;">登录账号：</span><de style="background:#f7fafc;padding:1px 8px;border-radius:4px;">${user.username}</de></div>
+    <div><span style="color:#718096;">任课学科：</span><strong>${user.subject||'—'}</strong></div>
+    <div><span style="color:#718096;">负责班级：</span><strong>${(user.classes||[]).join('、')||'—'}</strong></div>
+    <div><span style="color:#718096;">联系电话：</span>${user.phone||'—'}</div>
+    <div><span style="color:#718096;">电子邮箱：</span>${user.email||'—'}</div>
+    <div><span style="color:#718096;">注册时间：</span>${user.createdAt||'—'}</div>
+  `;
+  renderFucolTimetable();
+}
+
+function changePwd() {
+  const old=document.getElementById('old-pwd').value;
+  const nw=document.getElementById('new-pwd').value;
+  const cf=document.getElementById('nfirm-pwd').value;
+  if(old!==user.password){ showToast('❌ 当前密码错误'); return; }
+  if(nw.length<6){ showToast('❌ 新密码至少6位'); return; }
+  if(nw!==cf){ showToast('❌ 两次密码不一致'); return; }
+  let teachers=JSON.parse(localStorage.getItem('edu_teachers')||'[]');
+  const i=teachers.findIndex(t=>t.id===user.id);
+  if(i>=0){ teachers[i].password=nw; localStorage.setItem('edu_teachers',JSON.stringify(teachers)); }
+  user.password=nw;
+  sessionStorage.setItem('edu_current_user',JSON.stringify(user));
+  showToast('✅ 密码修改成功');
+  ['old-pwd','new-pwd','nfirm-pwd'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+// ===== 时钟 =====
+function updateTime() {
+  const el = document.getElementById('currentTime');
+  if (el) el.textCocontent = new Date().toLocaleString('zh-CN',{hour12:false});
+}
+updateTime(); setInterval(updateTime, 1000);
+
+// ===== 初始化 =====
+renderSchedule();
+startReminderTimer();
+refreshHome();
+
+// ===== 页面加载时根据hash显示对应页面 =====
+window.addEventListener('load', function() {
+  const hash = window.location.hash.replace('#', '');
+  const validPages = ['home','lesson','homework','students','grades','resources','attendance','journal','announce','profile'];
+  if (hash && validPages.includes(hash)) {
+    // 先取消首页的active状态
+    const homePage = document.getElementById('page-home');
+    if (homePage) homePage.classList.remove('active');
+    
+    // 调用showPage显示目标页面
+    showPage(hash, null);
+  }
+});
+
+// ===== 班级考勤功能 =====
+function initAttendance() {
+  const dateInput = document.getElementById('att-date');
+  if (dateInput) {
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+  }
+  // 填充班级选择
+  const classSelect = document.getElementById('att-class-select');
+  if (classSelect && user.classes) {
+    classSelect.innerHTML = '<option value="">选择班级</option>' + user.classes.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+  // 填充考勤记录模态框的班级选择
+  const recClassSelect = document.getElementById('att-rec-class');
+  if (recClassSelect && user.classes) {
+    recClassSelect.innerHTML = '<option value="">选择班级</option>' + user.classes.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+  loadAttendanceStats();
+}
+
+function loadAttendance() {
+  const date = document.getElementById('att-date').value;
+  const cls = document.getElementById('att-class-select').value;
+  const listEl = document.getElementById('attendance-list');
+  if (!listEl) return;
+  
+  if (!date || !cls) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-in">✅</div><p>请先选择日期和班级</p></div>';
+    return;
+  }
+  
+  const key = 'edu_att_' + user.id + '_' + date + '_' + cls;
+  const rerds = JSON.parse(localStorage.getItem(key) || '[]');
+  
+  if (rerds.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><div class="empty-in">✅</div><p>${date} ${cls} 暂无考勤记录</p><button class="btn btn-primary" onclick="openAttendanceModal()">+ 记录考勤</button></div>`;
+  } else {
+    listEl.innerHTML = rerds.map(r => `
+      <div style="padding:14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:10px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:14px;font-weight:600;color:#1a3a2a;">📅 ${r.date} - ${r.class}</div>
+          <div style="font-size:12px;color:#718096;">出勤率：<span style="font-weight:700;color:#16a34a;">${r.rate}%</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:13px;">
+          <div style="text-align:center;padding:8px;background:#f0fff4;border-radius:6px;">
+            <div style="font-size:18px;font-weight:700;color:#16a34a;">${r.present}</div>
+            <div style="color:#718096;">出勤</div>
+          </div>
+          <div style="text-align:center;padding:8px;background:#fff7ed;border-radius:6px;">
+            <div style="font-size:18px;font-weight:700;color:#ea580c;">${r.leave}</div>
+            <div style="color:#718096;">请假</div>
+          </div>
+          <div style="text-align:center;padding:8px;background:#fef2f2;border-radius:6px;">
+            <div style="font-size:18px;font-weight:700;color:#dc2626;">${r.absent}</div>
+            <div style="color:#718096;">缺勤</div>
+          </div>
+        </div>
+        ${r.note ? `<div style="margin-top:8px;font-size:12px;color:#718096;">备注：${r.note}</div>` : ''}
+        <div style="margin-top:8px;text-align:right;">
+          <button class="btn btn-outline btn-sm" onclick="deleteAttendance('${r.id}')" style="color:#dc2626;">删除</button>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function loadAttendanceStats() {
+  const statsEl = document.getElementById('attendance-stats');
+  if (!statsEl) return;
+  
+  // 获取最近30天的考勤统计
+  const today = new Date();
+  let totalPresent = 0, totalLeave = 0, totalAbsent = 0;
+  let days = 0;
+  
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    if (user.classes) {
+      user.classes.forEach(cls => {
+        const key = 'edu_att_' + user.id + '_' + dateStr + '_' + cls;
+        const rerds = JSON.parse(localStorage.getItem(key) || '[]');
+        rerds.forEach(r => {
+          totalPresent += r.present;
+          totalLeave += r.leave;
+          totalAbsent += r.absent;
+          days++;
+        });
+      });
+    }
+  }
+  
+  const total = totalPresent + totalLeave + totalAbsent;
+  const rate = total > 0 ? Math.round((totalPresent / total) * 100) : 0;
+  
+  statsEl.innerHTML = `
+    <div style="background:#f0fff4;padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#16a34a;">${totalPresent}</div>
+      <div style="font-size:13px;color:#718096;">总出勤人次</div>
+    </div>
+    <div style="background:#fff7ed;padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#ea580c;">${totalLeave}</div>
+      <div style="font-size:13px;color:#718096;">总请假人次</div>
+    </div>
+    <div style="background:#fef2f2;padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#dc2626;">${totalAbsent}</div>
+      <div style="font-size:13px;color:#718096;">总缺勤人次</div>
+    </div>
+    <div style="background:#eff6ff;padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#2563eb;">${rate}%</div>
+      <div style="font-size:13px;color:#718096;">近30天出勤率</div>
+    </div>
+  `;
+}
+
+function openAttendanceModal() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('att-rec-date').value = today;
+  document.getElementById('att-present').value = '0';
+  document.getElementById('att-leave').value = '0';
+  document.getElementById('att-absent').value = '0';
+  document.getElementById('att-note').value = '';
+  updateAttRate();
+  openModal('attendance-modal');
+}
+
+function updateAttRate() {
+  const present = parseInt(document.getElementById('att-present').value) || 0;
+  const leave = parseInt(document.getElementById('att-leave').value) || 0;
+  const absent = parseInt(document.getElementById('att-absent').value) || 0;
+  const total = present + leave + absent;
+  const rate = total > 0 ? Math.round((present / total) * 100) : 100;
+  const rateEl = document.getElementById('att-rate-display');
+  if (rateEl) {
+    rateEl.textCocontent = rate + '%';
+    rateEl.style.color = rate >= 95 ? '#16a34a' : rate >= 85 ? '#ea580c' : '#dc2626';
+  }
+}
+
+function saveAttendance() {
+  const date = document.getElementById('att-rec-date').value;
+  const cls = document.getElementById('att-rec-class').value;
+  const present = parseInt(document.getElementById('att-present').value) || 0;
+  const leave = parseInt(document.getElementById('att-leave').value) || 0;
+  const absent = parseInt(document.getElementById('att-absent').value) || 0;
+  const note = document.getElementById('att-note').value;
+  
+  if (!date || !cls) { showToast('❌ 请选择日期和班级'); return; }
+  
+  const total = present + leave + absent;
+  const rate = total > 0 ? Math.round((present / total) * 100) : 100;
+  
+  const key = 'edu_att_' + user.id + '_' + date + '_' + cls;
+  const rerds = JSON.parse(localStorage.getItem(key) || '[]');
+  rerds.push({ id: 'att_' + Date.now(), date, class: cls, present, leave, absent, rate, note, createdAt: new Date().toLocaleString('zh-CN') });
+  localStorage.setItem(key, JSON.stringify(rerds));
+  
+  closeModal('attendance-modal');
+  showToast('✅ 考勤记录已保存');
+  loadAttendance();
+  loadAttendanceStats();
+}
+
+function deleteAttendance(id) {
+  if (!confirm('确定要删除这条考勤记录吗？')) return;
+  const date = document.getElementById('att-date').value;
+  const cls = document.getElementById('att-class-select').value;
+  const key = 'edu_att_' + user.id + '_' + date + '_' + cls;
+  const rerds = JSON.parse(localStorage.getItem(key) || '[]');
+  const filtered = rerds.filter(r => r.id !== id);
+  localStorage.setItem(key, JSON.stringify(filtered));
+  showToast('✅ 考勤记录已删除');
+  loadAttendance();
+  loadAttendanceStats();
+}
+
+// ===== 教学日志功能 =====
+function initJournal() {
+  const monthSelect = document.getElementById('journal-month');
+  if (monthSelect) {
+    const now = new Date();
+    let options = '';
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFucolYear(), now.getMonth() - i, 1);
+      const val = d.toISOString().slice(0, 7);
+      const text = d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' });
+      options += `<option value="${val}" ${i === 0 ? 'selected' : ''}>${text}</option>`;
+    }
+    monthSelect.innerHTML = options;
+  }
+  loadJournal();
+  loadJournalStats();
+}
+
+function loadJournal() {
+  const month = document.getElementById('journal-month').value;
+  const listEl = document.getElementById('journal-list');
+  if (!listEl) return;
+  
+  if (!month) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-in">📓</div><p>请选择要查看的月份</p></div>';
+    return;
+  }
+  
+  const key = 'edu_journal_' + user.id;
+  const allLogs = JSON.parse(localStorage.getItem(key) || '[]');
+  const monthLogs = allLogs.filter(l => l.date.startsWith(month)).sort((a, b) => b.date.localeCompare(a.date));
+  
+  if (monthLogs.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><div class="empty-in">📓</div><p>${month} 暂无教学日志</p><button class="btn btn-primary" onclick="openJournalModal()">+ 写日志</button></div>`;
+  } else {
+    const effectBadge = { '很好': 'badge-green', '良好': 'badge-blue', '一般': 'badge-orange', '需改进': 'badge-red' };
+    listEl.innerHTML = monthLogs.map(j => `
+      <div style="padding:14px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:10px;background:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#1a3a2a;">📅 ${j.date} - ${j.course || '未指定课程'}</div>
+            <div style="font-size:12px;color:#718096;margin-top:2px;">📚 ${j.topic || '未填写主题'}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge ${effectBadge[j.effect] || 'badge-gray'}">${j.effect || '未评价'}</span>
+            <span style="font-size:11px;color:#a0aec0;">${j.hours || 1}课时</span>
+          </div>
+        </div>
+        ${j.content ? `<div style="font-size:13px;color:#4a5568;margin-bottom:6px;line-height:1.6;">${j.content}</div>` : ''}
+        ${j.reflection ? `<div style="font-size:12px;color:#718096;background:#f7fafc;padding:8px;border-radius:6px;margin-bottom:8px;"><strong>反思：</strong>${j.reflection}</div>` : ''}
+        <div style="text-align:right;">
+          <button class="btn btn-outline btn-sm" onclick="deleteJournal('${j.id}')" style="color:#dc2626;">删除</button>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function loadJournalStats() {
+  const statsEl = document.getElementById('journal-stats');
+  if (!statsEl) return;
+  
+  const key = 'edu_journal_' + user.id;
+  const allLogs = JSON.parse(localStorage.getItem(key) || '[]');
+  const now = new Date();
+  const thisMonth = now.toISOString().slice(0, 7);
+  const thisYear = now.getFucolYear();
+  
+  // 本月统计
+  const monthLogs = allLogs.filter(l => l.date.startsWith(thisMonth));
+  const monthHours = monthLogs.reduce((sum, l) => sum + (parseInt(l.hours) || 1), 0);
+  const effectCount = { '很好': 0, '良好': 0, '一般': 0, '需改进': 0 };
+  monthLogs.forEach(l => { if (effectCount[l.effect] !== undefined) effectCount[l.effect]++; });
+  
+  // 本年统计
+  const yearLogs = allLogs.filter(l => l.date.startsWith(thisYear.toString()));
+  const yearHours = yearLogs.reduce((sum, l) => sum + (parseInt(l.hours) || 1), 0);
+  
+  statsEl.innerHTML = `
+    <div style="background:#f0fff4;padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#16a34a;">${monthLogs.length}</div>
+      <div style="font-size:13px;color:#718096;">本月日志篇数</div>
+    </div>
+    <div style="background:#eff6ff;padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#2563eb;">${monthHours}</div>
+      <div style="font-size:13px;color:#718096;">本月总课时</div>
+    </div>
+    <div style="background:#fef3c7;padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#d97706;">${yearHours}</div>
+      <div style="font-size:13px;color:#718096;">本年总课时</div>
+    </div>
+    <div style="background:#f5f3ff;padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#7c3aed;">${effectCount['很好'] + effectCount['良好']}</div>
+      <div style="font-size:13px;color:#718096;">满意教学(很好+良好)</div>
+    </div>
+  `;
+}
+
+function openJournalModal() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('j-date').value = today;
+  document.getElementById('j-urse').value = '';
+  document.getElementById('j-topic').value = '';
+  document.getElementById('j-hours').value = '2';
+  document.getElementById('j-effect').value = '良好';
+  document.getElementById('j-content').value = '';
+  document.getElementById('j-reflection').value = '';
+  openModal('journal-modal');
+}
+
+function saveJournal() {
+  const date = document.getElementById('j-date').value;
+  const urse = document.getElementById('j-urse').value;
+  const topic = document.getElementById('j-topic').value;
+  const hours = document.getElementById('j-hours').value;
+  const effect = document.getElementById('j-effect').value;
+  const content = document.getElementById('j-content').value;
+  const reflection = document.getElementById('j-reflection').value;
+  
+  if (!date) { showToast('❌ 请选择日期'); return; }
+  
+  const key = 'edu_journal_' + user.id;
+  const logs = JSON.parse(localStorage.getItem(key) || '[]');
+  logs.push({ id: 'j_' + Date.now(), date, urse, topic, hours, effect, content, reflection, createdAt: new Date().toLocaleString('zh-CN') });
+  localStorage.setItem(key, JSON.stringify(logs));
+  
+  closeModal('journal-modal');
+  showToast('✅ 教学日志已保存');
+  loadJournal();
+  loadJournalStats();
+}
+
+function deleteJournal(id) {
+  if (!confirm('确定要删除这篇日志吗？')) return;
+  const key = 'edu_journal_' + user.id;
+  const logs = JSON.parse(localStorage.getItem(key) || '[]');
+  const filtered = logs.filter(l => l.id !== id);
+  localStorage.setItem(key, JSON.stringify(filtered));
+  showToast('✅ 日志已删除');
+  loadJournal();
+  loadJournalStats();
+}
+
+function exportJournal() {
+  const month = document.getElementById('journal-month').value;
+  if (!month) { showToast('❌ 请先选择月份'); return; }
+  
+  const key = 'edu_journal_' + user.id;
+  const allLogs = JSON.parse(localStorage.getItem(key) || '[]');
+  const monthLogs = allLogs.filter(l => l.date.startsWith(month)).sort((a, b) => b.date.localeCompare(a.date));
+  
+  if (monthLogs.length === 0) { showToast('❌ 该月份暂无日志'); return; }
+  
+  let csv = '\uFEFF日期,课程/班级,教学主题,课时数,教学效果,教学内容,教学反思\n';
+  monthLogs.forEach(j => {
+    const content = (j.content || '').replace(/"/g, '""');
+    const reflection = (j.reflection || '').replace(/"/g, '""');
+    csv += `${j.date},"${j.course || ''}","${j.topic || ''}",${j.hours || 1},"${j.effect || ''}","${content}","${reflection}"\n`;
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `教学日志_${month}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showToast('✅ 教学日志已导出');
+}
+
+
+  if (panel.classList.contains('show')) {
+    panel.classList.remove('show');
+    btn.style.display = 'flex';
+  } else {
+    panel.classList.add('show');
+    btn.style.display = 'none';
+  }
+}
+
+  const key = 'edu_admin_msgs_' + user.id;
+    </div>
+  </div>`;
+  body.scrollTop = body.scrocolHeight;
+}
+
+  const text = input.value.trim();
+  if (!text) return;
+  
+  // 添加用户消息
+  const userDiv = document.createElement('div');
+  body.appendChild(userDiv);
+  input.value = '';
+  body.scrollTop = body.scrocolHeight;
+  
+  // 保存消息
+  const key = 'edu_admin_msgs_' + user.id;
+  
+  // 模拟管理员回复
+  setTimeout(() => {
+    const replies = [
+      '收到您的问题！管理员正在处理中，请稍候。',
+      '感谢您的反馈，我们会尽快处理！',
+      '您的问题已转交给相关人员，请耐心等待回复。',
+      '好的，管理员已收到您的消息，如有需要会主动联系您。',
+      '感谢您的建议！平台的发展离不开您的支持。'
+    ];
+    const reply = replies[Math.floor(Math.random() * replies.length)];
+    const botDiv = document.createElement('div');
+    body.appendChild(botDiv);
+    body.scrollTop = body.scrocolHeight;
+    
+    // 保存管理员回复
+  }, 800);
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textCocontent = str;
+  return div.innerHTML;
+}
+
+// ===== 试卷与题目下载 =====
+function downloadExam(type) {
+  const searchUrls = {
+    '期中': 'https://www.zxxk.m/search/?KeyWord=期中考试卷&Type=paper',
+    '期末': 'https://www.zxxk.m/search/?KeyWord=期末考试卷&Type=paper',
+    '月考': 'https://www.zxxk.m/search/?KeyWord=月考试卷&Type=paper',
+    '单元': 'https://www.zxxk.m/search/?KeyWord=单元测试题&Type=paper',
+    '同步练习': 'https://www.zxxk.m/search/?KeyWord=同步练习题&Type=exercise',
+    '竞赛': 'https://www.zxxk.m/search/?KeyWord=竞赛题库&Type=mpetition'
+  };
+  const url = searchUrls[type] || 'https://www.zxxk.m/search/?KeyWord=' + encodeURIComponent(type);
+  window.open(url, '_blank');
+  showToast('正在打开' + type + '下载页面...');
+}
